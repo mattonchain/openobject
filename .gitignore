@@ -1,0 +1,45 @@
+# ── OS / editor noise ─────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+*~
+*.swp
+.vscode/
+.idea/
+
+# ── Claude Code (keep personal/local settings out; shared config OK) ─
+.claude/settings.local.json
+
+# ── Node (player stack) ───────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── OpenObject runtime data ───────────────────────────────────────
+# Art and the local library are runtime data — they NEVER belong in
+# the repo (HANDOFF §8, §15). GitHub holds OpenObject's code only.
+/player/data/
+/player/uploads/
+/player/library/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# ── Large binaries kept out of the repo proper (HANDOFF §15) ──────
+# Logo source masters live locally / can be attached to a Release;
+# only the optimized marks under assets/branding/ are committed.
+/Logo/
+OpenObject-HANDOFF.pdf
+*.psd
+*.afdesign
+
+# ── Installer build artifacts (Phase 2) ───────────────────────────
+/installer/build/
+/installer/work/
+*.img
+*.iso
+
+# ── Secrets / local env ───────────────────────────────────────────
+.env
+.env.*
