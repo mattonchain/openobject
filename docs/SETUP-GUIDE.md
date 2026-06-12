@@ -97,6 +97,16 @@ schedule.
 
 ---
 
+## Keeping OpenObject up to date
+
+OpenObject can update itself — no cables, no reinstalling. In the control panel, tap
+**Check for updates**. If a newer version is available you'll see it; tap **Update &
+restart**. The panel briefly shows the OpenObject screen and comes back on the new
+version. **Your art and settings are kept**, and updates only happen when you ask —
+nothing changes on its own. (The frame just needs to be online to check.)
+
+---
+
 ## If something seems stuck
 
 - The frame restarts itself whenever it gets power, so a quick **power cycle at the

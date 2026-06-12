@@ -218,6 +218,7 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 | Display name / mDNS | `openobject.local` | IP fallback shown on setup page. |
 | Fit/Fill default | **Fit** (original aspect ratio); settable | Applies to new clips; per-clip override always available. |
 | Default duration | Settable global | Per-clip override always available. |
+| Updates | **Manual check; track `main`** | Self-update from GitHub via the control panel (§15). Owner-initiated; fast-forward only. |
 
 ---
 
@@ -252,6 +253,39 @@ OpenObject/
 ├─ assets/                  ← OpenObject mark, idle/boot screens
 └─ ...
 ```
+
+### In-place updates (self-update from GitHub) — Phase 1
+
+The player updates itself from this GitHub repo, **from the control panel** — no
+reflash, no SSH, no rebuild. This is GitHub's only runtime role; **art still never
+touches the repo** (§8). The player runs as a **git checkout of the repo**, so "update"
+is a `git` fast-forward plus a restart.
+
+**Owner flow:** the control panel shows the running version and a **Check for updates**
+button → a `git fetch` compares the local checkout to its upstream tracking ref → if
+newer, it shows what's available → **Update & restart** fast-forwards the checkout
+(`git pull --ff-only`), reinstalls dependencies if they changed, and relaunches the
+player. The idle/boot screen flashes briefly; the panel returns on the new version, and
+`/healthz` reports the version that came back up.
+
+**Guardrails:**
+- **Fast-forward only** — never a force-reset. If the checkout has diverged (local
+  edits) the update refuses and says so rather than clobbering it.
+- **Runtime data is never touched.** `player/data/` and uploads are gitignored, so a
+  pull never disturbs the library, settings, or art.
+- **Update channel** (setting): track the **`main`** branch (default) or **tagged
+  releases only** (conservative). Releases also carry the prebuilt USB image (above),
+  but self-update pulls *source*, not the image.
+- **Local-first and offline-safe** (§9): if GitHub is unreachable the check fails
+  gracefully and playback is unaffected. Updating is always **owner-initiated** — never
+  automatic, never in the playback path.
+
+**Phase split:** Phase 1 builds and tests the whole mechanism on macOS — check,
+fast-forward, dependency reinstall, version reporting via `/healthz`, and a dev-friendly
+restart (the supervisor relaunches `node server.js`). It lands **after the core control
+panel**, since the UI lives there. Phase 2 only swaps the restart for the OS service
+manager (a systemd unit restarts the player on the device); the mechanism above is
+unchanged.
 
 ---
 
@@ -323,6 +357,18 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-12 — Self-update from GitHub (Phase 1)
+- **OpenObject updates itself from its GitHub repo via the control panel** (Check for
+  updates → Update & restart). The player runs as a git checkout; update =
+  `git pull --ff-only` + dependency reinstall + relaunch. Fast-forward only (refuses on
+  local divergence); runtime data (`player/data/`, uploads) is gitignored and untouched;
+  owner-initiated, never automatic, never in the playback path. Channel setting: track
+  `main` (default) or tagged releases. (§15, §12)
+- **Placed in Phase 1, not Phase 2:** the check / compare / pull / relaunch runs entirely
+  on the dev Mac and is built + tested there now; only the production restart shim
+  (systemd on the device) is Phase 2. It lands after the core control panel, since the
+  update UI lives there. (Requested by Matt 2026-06-12.)
 
 ### 2026-06-12 — Bench caution: screws above the MeLE
 - **Do not remove the two screws on the bracket above the MeLE** when working at the
