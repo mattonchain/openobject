@@ -81,17 +81,24 @@ UI/brand asset only** — displayed user *art* in SVG stays deferred per §6. Ae
 understated, functional, no clutter.
 
 ## Phases
-- **Phase 0** — repo, structure, docs, CLAUDE.md, GitHub. *(current)*
-- **Phase 1** — the Mac-testable web app: server, library/upload, control panel,
-  display page + behaviors, progressive sync, sleep hours. All visible in a browser
-  on macOS. Hardware-only features (Restart/Shutdown, Wi-Fi onboarding) ship as
-  visible-but-inert stubs.
+- **Phase 0** — repo, structure, docs, CLAUDE.md, GitHub. *(done)*
+- **Phase 1** *(current)* — the Mac-testable web app: server, library/upload, control
+  panel, display page + behaviors, progressive sync, sleep hours, **self-update from
+  GitHub**. All visible in a browser on macOS. Hardware-only features
+  (Restart/Shutdown, Wi-Fi onboarding) ship as visible-but-inert stubs.
 - **Phase 2** *(when hardware arrives)* — lightweight Debian-based Linux, Chromium
   kiosk, Wi-Fi onboarding AP + captive page, mDNS, BIOS Auto-Power-On, real
   restart/shutdown, optional SMB pull, bootable USB installer, prebuilt image as a
   GitHub Release asset. Fill every §19 placeholder from the bench.
 
 ## Running the player (Phase 1)
-_To be filled once `player/` is scaffolded — expected: `cd player && npm install &&
-npm start`, then open the printed `localhost` URL. The control panel and the display
-page are separate routes so the display can be pointed at by Chromium kiosk later._
+```
+cd player && npm install && npm start
+```
+Then open **http://localhost:3000/display** — the kiosk display (black, edge-to-edge
+stage; shows the branded idle screen until art exists). The control panel will live at
+**`/`** (currently redirects to the display until built). Display and control panel are
+separate routes so Chromium kiosk can point straight at the display later.
+
+Uses Node's built-in **`node:sqlite`** (Node ≥ 22.5) — no native module, no build step.
+Runtime data (the library DB under `player/data/`, uploads) is gitignored (HANDOFF §8).

@@ -1,0 +1,60 @@
+/* OpenObject display surface.
+   Full-panel black stage: 100vw × 100vh, zero margin/padding/border/scrollbars,
+   media to the physical edges. No decorative frame, ever (HANDOFF §6). */
+
+:root {
+  --stage-bg: #000;
+  --mark: #f2f2f2;  /* understated off-white idle mark */
+  --hint: #5b5b5b;  /* muted caption */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--stage-bg);
+}
+
+body {
+  overflow: hidden;                 /* no scrollbars, ever */
+  -webkit-user-select: none;
+          user-select: none;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;                         /* edge to edge */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--stage-bg);
+}
+
+/* Idle / empty-library state ------------------------------------------------ */
+
+.idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4.5vmin;
+}
+
+/* The supplied wordmark, traced to a single-colour transparent SVG and recoloured
+   here via CSS (HANDOFF §14, Branding). vmin keeps it proportional on the 1:1 panel. */
+.mark {
+  width: 46vmin;
+  height: 46vmin;
+  background-color: var(--mark);
+  -webkit-mask: url(/assets/branding/openobject-logo.svg) center / contain no-repeat;
+          mask: url(/assets/branding/openobject-logo.svg) center / contain no-repeat;
+}
+
+.hint {
+  margin: 0;
+  font: 400 2.4vmin/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  letter-spacing: 0.015em;
+  color: var(--hint);
+}
+
+.hint .host { color: #8a8a8a; }

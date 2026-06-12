@@ -8,6 +8,7 @@
 
 # ── Claude Code (keep personal/local settings out; shared config OK) ─
 .claude/settings.local.json
+.claude/launch.json
 
 # ── Node (player stack) ───────────────────────────────────────────
 node_modules/
