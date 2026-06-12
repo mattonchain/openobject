@@ -322,6 +322,20 @@ The original software is a standard Android app on Android-x86. To manually rese
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
 
+### 2026-06-11 — Branding asset approach
+- **Idle/boot-screen logo variants will be produced with Potrace → SVG**
+  (`openobject-logo.svg`): single-color and transparent so CSS recolors it
+  white-on-dark or black-on-light; transparent PNG exports derived from it as needed.
+  Trace source: the **2k master** (`Logo/logo-2k.png`), falling back to `logo_orig.png`
+  if the higher-res export proves a soft upscale rather than added detail — the 2k/4k
+  files are near-uncompressed, so verify edge crispness at trace time. The committed
+  PNG marks (≤1024) stay sourced from the clean `logo_orig.png`.
+  A plain raster color-inverse was rejected (trivial — Matt does that in Photoshop if
+  ever needed). **SVG here is a UI/brand asset only**; displayed user *art* in SVG
+  stays deferred per §6. (§14)
+- **Logo source re-centered** by Matt (subtle but critical glyph centering fix); the
+  committed marks were refreshed from the new source (commit `df57ec6`).
+
 ### 2026-06-11 — Phase 0 kickoff
 - **Content model confirmed:** Library + select — persistent library, curated rotation, pin one clip. Not replace-on-upload. (§7)
 - **Stack chosen:** Node.js + Express + vanilla HTML/CSS/JS + SQLite, no build step — one language across server and the browser display page, chosen for revivability. (§5)

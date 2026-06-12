@@ -70,9 +70,14 @@ PSD, raw, GLB, and OS noise (`.DS_Store`, office files, etc.). Uploads stay
 byte-for-byte.
 
 ## Branding
-The **OPEN / OBJECT** wordmark lives in `assets/branding/` (optimized PNGs; the
-large source masters stay in `Logo/`, gitignored). Phase 1 derives transparent /
-white-on-dark variants (via `sharp`) for the dark idle/boot screen. Aesthetic:
+The **OPEN / OBJECT** wordmark lives in `assets/branding/` (optimized opaque PNGs;
+large source masters stay in `Logo/`, gitignored). **Phase 1:** vectorize the high-res
+master (`Logo/logo-2k.png`, falling back to `logo_orig.png` if the 2k turns out a soft
+upscale rather than added detail) with **Potrace → `openobject-logo.svg`** — single-color and
+transparent, so CSS recolors it white-on-dark (idle/boot screen) or black-on-light;
+derive transparent PNG exports from it as needed. A plain raster color-inverse is
+*not* the plan (Matt handles that in Photoshop if ever needed). **SVG here is a
+UI/brand asset only** — displayed user *art* in SVG stays deferred per §6. Aesthetic:
 understated, functional, no clutter.
 
 ## Phases
