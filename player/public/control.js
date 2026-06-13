@@ -59,7 +59,7 @@ let mode = 'sequence';
 let durationUnit = 'seconds';
 let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓ moves
 let sleepRanges = []; // up to two daily blank windows (HANDOFF §13)
-let manualBlank = false; // instant "Blank panel" override
+let manualBlank = false; // instant "Blank screen" override
 let runningCommit = null; // the commit this player reports — used to detect the restart
 
 const fmtBytes = (n) => {
@@ -113,7 +113,7 @@ function card(item) {
       <span class="sub">${fmtBytes(item.bytes)}</span>
     </div>
     <div class="actions">
-      <button class="pin" aria-pressed="${isPinned}" title="Hold this piece on the panel permanently">${isPinned ? 'Pinned' : 'Pin'}</button>
+      <button class="pin" aria-pressed="${isPinned}" title="Hold this piece on the screen permanently">${isPinned ? 'Pinned' : 'Pin'}</button>
       <button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>
       <button class="del">Delete</button>
     </div>`;
@@ -408,7 +408,7 @@ function renderSleepStatus() {
 
 function renderBlank() {
   blankBtn.setAttribute('aria-pressed', String(manualBlank));
-  blankBtn.textContent = manualBlank ? 'Blanked' : 'Blank panel';
+  blankBtn.textContent = manualBlank ? 'Blanked' : 'Blank screen';
   renderSleepStatus();
 }
 async function toggleBlank() {
@@ -502,10 +502,10 @@ async function checkUpdate() {
 }
 
 async function applyUpdate() {
-  if (!confirm('Update OpenObject and restart the panel?\nThe display briefly shows the OpenObject screen, then returns on the new version.')) return;
+  if (!confirm('Update OpenObject and restart the frame?\nThe frame briefly shows the OpenObject screen, then returns on the new version.')) return;
   applyUpdateBtn.disabled = true;
   checkUpdateBtn.disabled = true;
-  setUpdStatus('Updating… the panel will briefly show the OpenObject screen.');
+  setUpdStatus('Updating… the frame will briefly show the OpenObject screen.');
   const before = runningCommit;
   let res = null;
   try {
@@ -516,7 +516,7 @@ async function applyUpdate() {
   applyUpdateBtn.disabled = false;
   if (res && res.ok === false) {
     checkUpdateBtn.disabled = false;
-    return setUpdStatus('Update couldn’t complete: ' + escapeHtml(res.error || 'unknown error') + ' Nothing was changed on the panel.');
+    return setUpdStatus('Update couldn’t complete: ' + escapeHtml(res.error || 'unknown error') + ' Nothing was changed on the frame.');
   }
   if (res && res.upToDate) {
     checkUpdateBtn.disabled = false;
@@ -543,13 +543,44 @@ function setPowerStatus(html) {
   powerStatus.hidden = !html;
 }
 
-// Real soft-restart via the supervisor — the same exit→relaunch as self-update. The version is
-// unchanged, so we watch the boot id (not the commit) to confirm the player actually bounced.
-async function restartPlayer() {
-  if (!confirm('Restart the frame now?\nThe display goes briefly to the OpenObject screen, then comes back.')) return;
+// Both power actions arm a cancellable countdown inline in the Power card (no native dialog) — a
+// safety net against a misclick. Shut down especially: it can't be casually undone (you power the
+// frame back on by replugging the outlet). At zero the action fires; Cancel aborts.
+let countdownTimer = null;
+function clearCountdown() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+}
+function armPowerAction(gerund, seconds, run) {
+  clearCountdown();
   restartBtn.disabled = true;
   shutdownBtn.disabled = true;
-  setPowerStatus('Restarting… the panel will be back in a moment.');
+  let remaining = seconds;
+  powerStatus.innerHTML =
+    `${gerund} in <span id="countNum">${remaining}</span>s… <button type="button" class="update-btn power-cancel" id="cancelPowerBtn">Cancel</button>`;
+  powerStatus.hidden = false;
+  document.getElementById('cancelPowerBtn').addEventListener('click', cancelPowerAction);
+  countdownTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearCountdown();
+      run();
+    } else {
+      const el = document.getElementById('countNum');
+      if (el) el.textContent = remaining;
+    }
+  }, 1000);
+}
+function cancelPowerAction() {
+  clearCountdown();
+  restartBtn.disabled = false;
+  shutdownBtn.disabled = false;
+  setPowerStatus('Cancelled.');
+}
+
+// Real soft-restart via the supervisor — the same exit→relaunch as self-update. The version is
+// unchanged, so we watch the boot id (not the commit) to confirm the player actually bounced.
+async function doRestart() {
+  setPowerStatus('Restarting… the frame will be back in a moment.');
   let before = null;
   try { before = (await fetch('/healthz', { cache: 'no-store' }).then((r) => r.json())).boot; } catch {}
   let res = null;
@@ -561,17 +592,18 @@ async function restartPlayer() {
   const h = await pollHealthz((x) => x.boot && x.boot !== before);
   restartBtn.disabled = false; shutdownBtn.disabled = false;
   if (h) {
-    setPowerStatus('<span class="upd-ok">✓</span> Restarted — the panel is back.');
+    setPowerStatus('<span class="upd-ok">✓</span> Restarted — the frame is back.');
     await refresh();
   } else {
-    setPowerStatus('The panel is taking longer than expected. It should return on its own — reload this page in a moment.');
+    setPowerStatus('The frame is taking longer than expected. It should come back on its own — reload this page in a moment.');
   }
 }
 
 // Phase-1 stub: there's no device to power off on the dev Mac (HANDOFF §10). Surfaces the server's
 // explanation; Phase 2 wires this to a real power-off on the frame.
-async function shutdownDevice() {
+async function doShutdown() {
   const res = await fetch('/api/system/shutdown', { method: 'POST' }).then((r) => r.json()).catch(() => null);
+  restartBtn.disabled = false; shutdownBtn.disabled = false;
   setPowerStatus(escapeHtml((res && res.message) || 'Shut down runs on the installed frame.'));
 }
 
@@ -605,7 +637,7 @@ async function pollHealthz(isBack, timeoutMs = 90000) {
 }
 
 async function waitForRestart(before) {
-  setUpdStatus('Updating… waiting for the panel to come back.');
+  setUpdStatus('Updating… waiting for the frame to come back.');
   const h = await pollHealthz((x) => x.commit && x.commit !== before);
   checkUpdateBtn.disabled = false;
   if (h) {
@@ -614,7 +646,7 @@ async function waitForRestart(before) {
     await refresh();
     await loadUpdate(); // refreshes the version line to the new number · date · commit
   } else {
-    setUpdStatus('The panel is taking longer than expected. It should return on its own — reload this page in a moment.');
+    setUpdStatus('The frame is taking longer than expected. It should come back on its own — reload this page in a moment.');
   }
 }
 
@@ -655,8 +687,8 @@ blankBtn.addEventListener('click', toggleBlank);
 checkUpdateBtn.addEventListener('click', checkUpdate);
 applyUpdateBtn.addEventListener('click', applyUpdate);
 dismissUpdateBtn.addEventListener('click', dismissUpdate);
-restartBtn.addEventListener('click', restartPlayer);
-shutdownBtn.addEventListener('click', shutdownDevice);
+restartBtn.addEventListener('click', () => armPowerAction('Restarting', 5, doRestart));
+shutdownBtn.addEventListener('click', () => armPowerAction('Shutting down', 10, doShutdown));
 
 drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('keydown', (e) => {

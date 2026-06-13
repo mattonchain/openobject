@@ -42,7 +42,7 @@ right place.
    by itself whenever it has power.
 3. Boot the installer. *(Optional: back up the original software first if you have
    the external drive.)*
-4. Install OpenObject and wait for the panel to show the **OpenObject** screen.
+4. Install OpenObject and wait for the frame to show the **OpenObject** screen.
 5. On your phone, join the temporary **OpenObject-Setup** Wi-Fi network. A setup page
    opens automatically — pick your home Wi-Fi and enter the password. The frame
    switches over to your network.
@@ -80,15 +80,15 @@ tabs:
   order is kept for whenever you switch back to Sequence.)
 
 **Pin one piece.** Want a single image up permanently? **Pin** it and it holds on the
-panel until you unpin.
+screen until you unpin.
 
 **How each piece fills the square.** The frame is square; most art isn't. Per piece:
-- **Fit** *(default)* — shows the whole image at its real shape; the rest of the panel
+- **Fit** *(default)* — shows the whole image at its real shape; the rest of the screen
   stays black. Nothing is cut off.
 - **Fill** — zooms the image to cover the whole square, trimming the edges evenly.
 
-Either way there's **no frame or border** — art (or the black surround) goes right to
-the edges of the panel.
+Either way there's **no border** — the art (or the black surround) goes right to
+the edges of the screen.
 
 **Duration.** Set **one time** — in **seconds, minutes, or hours** — that applies to
 **every** piece, the same for each (no per-piece timing). Videos and animations always **loop** and never freeze on the first
@@ -97,21 +97,20 @@ moves on when it's up.
 
 **Sound.** Always off. It's silent art on a wall.
 
-**Sleep hours** *(in the **Settings** tab)*. Optionally have the panel rest on a schedule —
+**Sleep hours** *(in the **Settings** tab)*. Optionally have the screen rest on a schedule —
 you get **two time ranges**, each with its own on/off checkbox, so you can cover both "while I'm at work"
-and "overnight." Set them on a normal **12-hour clock** (AM/PM). While asleep, the panel
+and "overnight." Set them on a normal **12-hour clock** (AM/PM). While asleep, the screen
 shows the OpenObject logo dimmed and stops playing, then picks the rotation back up on its
-own. **Want it off right now?** Tap **Blank panel** at the top of the control panel — the
+own. **Want it off right now?** Tap **Blank screen** at the top of the control panel — the
 art goes dark until you tap it again.
 
-**Restart or shut down** *(Settings tab)*. **Restart** reboots the frame's software and
-brings it right back — handy if something seems stuck. **Shut down** turns the frame off
-(this works once OpenObject is installed on the frame). Neither needs you to reach behind
-the panel.
+**Restart or shut down** *(Settings tab)*. **Restart** restarts the frame — handy if
+something seems stuck. **Shut down** turns off the frame (this works once OpenObject is
+installed on the frame). Neither needs you to reach behind it.
 
 **Reaching the frame** *(Settings → Wi-Fi)*. The frame sets up its own Wi-Fi on first
-boot so you can put it on your home network — no keyboard needed. The Wi-Fi section also
-lists the addresses you can open the control panel at from another device.
+boot so you can put it on your home network. The Wi-Fi section also lists the addresses
+you can open the control panel at from another device.
 
 ---
 
@@ -123,7 +122,7 @@ running (a version number and the date it's from).
 
 Tap **Check for updates**. If a newer version is available you'll see a short list of
 what's in it (plus a **What's new** link for the full details); tap **Update & Restart**.
-The panel briefly shows the OpenObject screen and comes back on the new version — **your
+The frame briefly shows the OpenObject screen and comes back on the new version — **your
 art and settings are kept**. Updates only happen when you ask; nothing changes on its own,
 and the frame just needs to be online to check. Not ready? **Not now** dismisses it.
 

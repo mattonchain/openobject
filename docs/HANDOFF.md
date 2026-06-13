@@ -185,6 +185,7 @@ A single **storage-mode setting** governs this: default **"full sync"**, with **
 The physical power button is hard to reach when wall-mounted. This is fully solved in software/BIOS:
 
 - **Auto Power On (BIOS):** enabled during reflash (§4). The unit boots the moment it receives power. Power control becomes the wall outlet (or an optional smart plug). Also means the frame **self-recovers after a power blip** instead of waiting for a button press.
+    - **Confirmed (Matt, 2026-06-13):** this unit **boots when the power cord is unplugged and replugged**, so cycling the outlet reliably boots it and the hard-to-reach physical power button is a **non-issue**. After a **Shut down**, you power the frame back on by replugging (or toggling a smart plug). Whether this is the BIOS default or needs the Auto-Power-On setting — and that setting's exact label — is still bench-TBD (§19).
 - **Soft restart / shutdown (web UI):** the control panel exposes **Restart** and **Shut down**, initiated from the owner's browser. Handles all intentional reboots without reaching behind the panel.
 - **Hard lockup (rare):** power-cycle the outlet; an optional ~$15 smart plug makes this a phone tap. Not required.
 
@@ -216,9 +217,33 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 
 **Built 2026-06-13 (§20, Phase-1 stub).** The control panel's **Settings → Wi-Fi** card explains the
 first-run onboarding flow above; the setup AP + captive page themselves are **Phase 2** (they need the
-device's networking). The card also shows **how to reach the panel now** — the live LAN address(es)
-(`http://<ip>:<port>`, from `GET /api/system`) plus the `openobject.local` name that resolves on the
-installed frame — which is real and useful in Phase 1.
+device's networking). The card also shows **how to reach the control panel now** — the live LAN
+address(es) (`http://<ip>:<port>`, from `GET /api/system`) plus the `openobject.local` name that
+resolves on the installed frame — which is real and useful in Phase 1.
+
+**Reference — observed Infinite Objects onboarding (2026-06-13), and our refinements.** Matt captured
+the stock XXL's Wi-Fi setup; it's a proven flow worth building on. Observed: the frame's screen shows
+**two QR codes** — (1) a Wi-Fi-join QR for its setup AP (`IOXXL-<id>`, WPA password `infinite`), and
+(2) a URL QR to a config page at `ioxxl.local`. On the page you enter **SSID + Pass Phrase → Connect**;
+the phone then shows "configuration in progress — wait for confirmation on the screen," and the frame
+confirms "Successfully Connected… searching for updates and rebooting."
+
+Refinements to adopt for OpenObject (Phase 2 — build with the hardware):
+- **QR codes on the frame's setup screen** — the biggest win. The branded boot/idle screen, in its "no
+  network yet" state, *becomes* the setup screen: mark + a **join-AP QR** (one-tap join, no typing) + an
+  **open-config QR** (one tap to the captive page) + a manual fallback (network name, password, URL).
+- **Plain labels** on the config page — "Wi-Fi network name" and "Password", not "SSID" / "Pass Phrase".
+- **Pick the network from a scanned list** rather than typing the SSID (typo-proof; manual entry as a
+  fallback for hidden networks).
+- **Two-screen confirmation** — when the frame leaves its own AP to join home Wi-Fi, the phone loses
+  contact with it, so success is confirmed on the **frame's screen** ("Connected ✓") while the phone
+  shows "applying — watch the frame."
+- **Recovery line + self-heal** — on failure the setup AP returns; tell the user to re-join it and retry.
+- **AP naming/password** — `OpenObject-<id>` (a short unique suffix so two frames don't collide); open
+  network vs. a QR-encoded password is a Phase-2 call (the join-QR makes a password basically free).
+
+The stock screens themselves are reference only — captured here as learnings, not committed (art and
+photos never enter the repo, §8). Build none of this in Phase 1.
 
 ---
 
@@ -432,6 +457,31 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-13 — Shut down / Restart countdown-cancel; power-cycle boots confirmed
+- **Power actions now arm a countdown the owner can cancel** (Matt): **Shut down** counts down
+  **10s**, **Restart** **5s**, shown inline in the Power card with a **Cancel** button (replacing the
+  native confirm dialogs). At zero the action fires; Cancel aborts and re-enables the buttons — a
+  safety net against a misclick on a hard-to-undo action.
+- **Confirmed (Matt): the unit boots when power is unplugged and restored** — so cycling the outlet
+  is a reliable boot, the hard-to-reach physical power button is a non-issue, and after a Shut down
+  you power back on by replugging (or a smart plug). Recorded in §10; the exact Auto-Power-On
+  default/label is still bench-TBD (§19). (Matt, 2026-06-13.)
+
+### 2026-06-13 — Terminology nailed down; control-panel copy pass; onboarding reference
+- **Canonical vocabulary (user-facing):** **frame** = the physical device; **control panel** = the web
+  UI you control it from; **screen** = the display surface; **display** = the `/display` kiosk page only.
+  Swept the control panel + Setup Guide to match — e.g. header **"Blank panel" → "Blank screen"**, restart/
+  update status copy now says "frame" (the device) not "panel," and "Reach this panel" → "Reach the control
+  panel." (Engineering prose in this doc still says "panel" for the physical LCD where that's the precise
+  hardware term — the scheme governs user-facing copy.)
+- **Power-card copy tightened** (Matt): Restart note → **"Restarts the frame."** (dropped "and brings it
+  right back" — restart already implies the return); Shut down note → **"Turns off the frame."** Button
+  stays **"Shut down"** (two words — it's the verb, matching macOS/Windows).
+- **Wi-Fi card:** removed "no keyboard needed" (don't tell users what they don't need); "frame" throughout.
+- **Onboarding reference recorded (§11):** Matt shared the stock Infinite Objects Wi-Fi flow; logged it
+  plus our refinements (QR codes on the setup screen, plain labels, pick-from-scanned-list, two-screen
+  confirmation, recovery/self-heal, AP naming) as the Phase-2 design. Build none now. (Matt, 2026-06-13.)
 
 ### 2026-06-13 — Hardware stubs (Restart / Shut down / Wi-Fi); Phase 1 feature-complete
 - **Settings → Power card:** **Restart** ships **live** — an app-level soft-restart through the
