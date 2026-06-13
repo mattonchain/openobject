@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenObject — Control</title>
-  <link rel="icon" href="/assets/branding/openobject-logo-256.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/branding/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/branding/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/branding/apple-touch-icon.png">
   <link rel="stylesheet" href="/control.css">
 </head>
 <body>
@@ -25,6 +27,26 @@
     </section>
 
     <p id="status" class="status" hidden></p>
+
+    <!-- Rotation settings — global, equal time for every piece (HANDOFF §7) -->
+    <section class="settings">
+      <label class="field">
+        Each piece shows for
+        <input id="duration" type="number" min="1" step="1" inputmode="numeric">
+        <select id="durationUnit">
+          <option value="seconds">seconds</option>
+          <option value="minutes">minutes</option>
+          <option value="hours">hours</option>
+        </select>
+      </label>
+      <label class="field">
+        Order
+        <select id="mode">
+          <option value="sequence">Sequence</option>
+          <option value="shuffle">Shuffle</option>
+        </select>
+      </label>
+    </section>
 
     <!-- Library (HANDOFF §7) -->
     <section class="library">

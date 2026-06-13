@@ -31,14 +31,38 @@ body {
   background: var(--stage-bg);
 }
 
-/* Idle / empty-library state ------------------------------------------------ */
+/* Media layers ------------------------------------------------------------- */
+.media { position: absolute; inset: 0; }
 
+.layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 600ms ease;   /* crossfade between pieces */
+}
+.layer.show { opacity: 1; }
+
+.layer img,
+.layer video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--stage-bg);      /* letterbox is bare black stage, NOT a frame (§6) */
+}
+
+/* Fit = whole piece, original aspect, black fills the rest. Fill = cover, center-crop. */
+.fit-fit  img, .fit-fit  video { object-fit: contain; }
+.fit-fill img, .fit-fill video { object-fit: cover; object-position: center; }
+
+/* Idle / empty-library state ------------------------------------------------ */
 .idle {
+  position: relative;               /* above the (empty) media layers */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4.5vmin;
 }
+.idle.hidden { display: none; }
 
 /* The supplied wordmark, traced to a single-colour transparent SVG and recoloured
    here via CSS (HANDOFF §14, Branding). vmin keeps it proportional on the 1:1 panel. */

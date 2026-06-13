@@ -39,6 +39,7 @@ function initDb() {
   db = new DatabaseSync(DB_PATH);
   db.exec('PRAGMA journal_mode = WAL;');
 
+  // Global settings (duration, rotation order, …) as simple key/value rows.
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       key   TEXT PRIMARY KEY,
@@ -46,22 +47,20 @@ function initDb() {
     );
   `);
 
-  // Library = every uploaded clip, kept on local storage (HANDOFF §7). The Rotation +
-  // Pin (the curated subset shown on the panel) arrive with the control panel.
+  // Library = every uploaded clip (HANDOFF §7). Fit/Fill is per-clip (§6). Duration is
+  // global/equal-time (a single setting), so there is intentionally no per-clip duration.
   db.exec(`
     CREATE TABLE IF NOT EXISTS library (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       filename      TEXT NOT NULL UNIQUE,        -- stored file on disk (UPLOADS_DIR)
       original_name TEXT NOT NULL,               -- name as uploaded, for display
       mime          TEXT,
-      format        TEXT NOT NULL,               -- jpeg|png|gif|webp|avif|mp4|mov
+      format        TEXT NOT NULL,               -- jpeg|png|gif|avif|webp|mp4|mov|webm
       kind          TEXT NOT NULL,               -- still|animated|video (drives behavior)
       bytes         INTEGER NOT NULL,
       width         INTEGER,
       height        INTEGER,
       fit           TEXT NOT NULL DEFAULT 'fit', -- per-clip Fit/Fill (HANDOFF §6)
-      duration_ms   INTEGER,                     -- per-clip override; NULL = global default
-      video_full    INTEGER NOT NULL DEFAULT 1,  -- video: 1=full length, 0=loop to duration_ms
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -74,8 +73,19 @@ function getDb() {
   return db || initDb();
 }
 
-// ── Library queries ─────────────────────────────────────────────────
+// ── Settings (key/value) ────────────────────────────────────────────
+function getSetting(key, fallback) {
+  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : fallback;
+}
 
+function setSetting(key, value) {
+  getDb()
+    .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run(key, String(value));
+}
+
+// ── Library queries ─────────────────────────────────────────────────
 function addLibraryItem(item) {
   const info = getDb()
     .prepare(
@@ -95,27 +105,41 @@ function addLibraryItem(item) {
   return getLibraryItem(Number(info.lastInsertRowid));
 }
 
+// Control grid shows newest first; the display rotation plays in stable upload order.
 function listLibrary() {
-  return getDb().prepare(`SELECT * FROM library ORDER BY id DESC`).all();
+  return getDb().prepare('SELECT * FROM library ORDER BY id DESC').all();
+}
+function listRotation() {
+  return getDb().prepare('SELECT * FROM library ORDER BY id ASC').all();
 }
 
 function getLibraryItem(id) {
-  return getDb().prepare(`SELECT * FROM library WHERE id = ?`).get(id);
+  return getDb().prepare('SELECT * FROM library WHERE id = ?').get(id);
+}
+
+function setLibraryFit(id, fit) {
+  if (!getLibraryItem(id)) return null;
+  getDb().prepare('UPDATE library SET fit = ? WHERE id = ?').run(fit, id);
+  return getLibraryItem(id);
 }
 
 function deleteLibraryItem(id) {
   const row = getLibraryItem(id);
   if (!row) return null;
-  getDb().prepare(`DELETE FROM library WHERE id = ?`).run(id);
+  getDb().prepare('DELETE FROM library WHERE id = ?').run(id);
   return row;
 }
 
 module.exports = {
   initDb,
   getDb,
+  getSetting,
+  setSetting,
   addLibraryItem,
   listLibrary,
+  listRotation,
   getLibraryItem,
+  setLibraryFit,
   deleteLibraryItem,
   DATA_DIR,
   UPLOADS_DIR,

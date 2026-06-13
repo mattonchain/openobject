@@ -7,10 +7,13 @@ no build step (see `CLAUDE.md` and HANDOFF §5).
 
 **Status:** Phase 1 — being built and tested on macOS before it ever touches
 hardware. Built so far: the Express server, the SQLite store (Node's built-in
-`node:sqlite`, no native build step), the black edge-to-edge **display page** (idle
-state), and the **control panel** with **web upload + Library** (add, list, delete;
-format-gated). The rotation/pin curation, per-clip durations + Fit/Fill, the display
-rotation engine, sleep hours, and self-update come next.
+`node:sqlite`, no native build step), the **control panel** (web upload, Library with
+delete + per-clip **Fit/Fill**, and global **duration + order** settings), and the
+**display rotation engine** — `/display` cycles the rotation edge-to-edge with Fit/Fill,
+one global equal-time duration (seconds/minutes/hours), **Pin** (hold one piece),
+loop-to-fill, and Sequence/Shuffle/Random, crossfading between pieces and folding in
+changes without restarting. Rotation curation, sleep hours, restart/shutdown stubs, and
+self-update come next.
 
 Run it with:
 

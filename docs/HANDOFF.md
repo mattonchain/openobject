@@ -139,20 +139,18 @@ The square (1:1) panel makes this choice matter more than on a normal screen, be
 **Library + Rotation + Pin.**
 
 - **Library** — everything ever uploaded; stays on the player's local storage.
-- **Rotation** — the subset currently cycling on the panel, in a chosen order. Order is **Sequence**, **Shuffle**, or **Random**:
+- **Rotation** — the subset currently cycling on the panel, in a chosen order. Order is **Sequence** or **Shuffle**:
     - **Sequence** — plays in the order you set, looping.
     - **Shuffle** — a randomized *pass*: every clip plays once before any repeats, then reshuffles. Good coverage, no near-term repeats.
-    - **Random** — an independent random pick each advance; may repeat a clip, no coverage guarantee.
 - **Pin (a.k.a. "permanent"/"hold")** — optionally elevate **one** clip to display permanently, overriding the cycle until unpinned. Supports the workflow "upload several, then manually promote whichever one to permanent," and the degenerate case "I just want one image up forever."
 
 Uploading **adds to the library**. A "daily refresh" habit is achieved by curating which library items are in the rotation (clearing/selecting), so both mental models — daily-replace and growing-curated-library — are served by the same structure. _(**Confirmed 2026-06-11:** library+select, not hard replace-on-upload.)_
 
-**Duration:**
+**Duration — one global, equal time for every piece (confirmed 2026-06-12).**
 
-- A **global default duration** applies to every clip unless overridden. Each clip may **override** with its own duration. (Drop 10 clips → they inherit the default → tweak the few exceptions.)
-- **Images** need an explicit duration (how long to hold the still).
-- **Video** duration is either **"full length"** (play once through, then advance) or a **fixed duration** (loop to fill that time — a 6s clip set to 30s loops five times). **All video always loops; none ever plays once and freezes on a last frame.**
-- **Animated formats (GIF/WebP/AVIF)** follow the same loop-to-fill rule as video.
+- A **single global duration** applies to **every** piece in the rotation — equal time per content piece. There is **no per-clip duration**.
+- **Stills** (JPEG/PNG) hold for the duration.
+- **Animated** (GIF/WebP/AVIF) and **video** (MP4/MOV/WebM) **loop to fill** the duration: a piece shorter than it repeats; a piece **longer** than it is cut off when the timer advances. **Video always loops; it never freezes on a last frame.**
 
 ---
 
@@ -217,7 +215,8 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 | Idle / empty screen | **Branded card**, not black | Shows OpenObject mark + "add art at openobject.local". Takes a **logo asset** (Matt-supplied) so the mark drops in without redesign. |
 | Display name / mDNS | `openobject.local` | IP fallback shown on setup page. |
 | Fit/Fill default | **Fit** (original aspect ratio); settable | Applies to new clips; per-clip override always available. |
-| Default duration | Settable global | Per-clip override always available. |
+| Display duration | **Settable global** (seconds / minutes / hours) | One equal-time duration for **every** piece; no per-clip override. |
+| Rotation order | **Sequence** | Sequence / Shuffle (§7); settable. |
 | Updates | **Manual check; track `main`** | Self-update from GitHub via the control panel (§15). Owner-initiated; fast-forward only. |
 
 ---
@@ -357,6 +356,29 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-12 — Display rotation engine; global equal-time duration
+- **Duration is one global, equal-time setting for every piece** — no per-clip duration
+  (revises §7/§12). Stills hold for it; animated + video loop to fill it; a clip longer
+  than the duration is cut when the timer advances; video always loops. Dropped the
+  per-clip `duration_ms`/`video_full` columns from the `library` table. (Matt, 2026-06-12.)
+- **/display rotation engine built** (§6, §7, §9): renders the Rotation (v1 = the whole
+  Library, upload order) edge-to-edge with per-clip Fit/Fill, crossfades between pieces,
+  Sequence/Shuffle, always muted. New uploads/deletes, Fit/Fill flips, and
+  duration/order changes fold in live via a ~5s poll — no loop restart (§9 progressive).
+- **Control panel** gains a global Settings bar (duration + order) and a per-clip
+  Fit/Fill toggle. New endpoints: `GET/PUT /api/settings`, `GET /api/display`,
+  `PATCH /api/library/:id {fit}`.
+- **Pin** (hold one piece permanently — collapses the rotation to it, resumes on unpin)
+  and **duration units** (seconds / minutes / hours) included. New endpoints
+  `PUT /api/pin/:id` + `DELETE /api/pin`; deleting a pinned piece clears the pin.
+- **Rotation default = the whole Library**; new uploads auto-join. Curation
+  (remove-from-rotation, reorder) comes next. (Matt, 2026-06-12.)
+- **Web-app favicon + apple-touch-icon** added (white-bg logo at 16/32/180 px) — the
+  apple-touch-icon gives a proper home-screen icon for phone/iPad control.
+- **Random rotation order removed** — Shuffle already gives random order with no
+  near-term repeats; pure Random (independent pick, can repeat back-to-back) was an odd
+  fit for an art frame. Modes are now **Sequence / Shuffle** only. (Matt, 2026-06-12.)
 
 ### 2026-06-12 — Upload + Library shipped; node:sqlite locked
 - **SQLite library chosen: Node's built-in `node:sqlite`** (over better-sqlite3) — zero

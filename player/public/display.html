@@ -4,12 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>OpenObject</title>
-  <link rel="icon" href="/assets/branding/openobject-logo-256.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/branding/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/branding/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/branding/apple-touch-icon.png">
   <link rel="stylesheet" href="/display.css">
 </head>
 <body>
   <!-- Full-panel black stage, edge to edge, zero chrome, no frame ever (HANDOFF §6). -->
   <main id="stage" class="stage">
+    <!-- Two stacked layers so pieces can crossfade without a black flash. -->
+    <div class="media">
+      <div id="layer0" class="layer"></div>
+      <div id="layer1" class="layer"></div>
+    </div>
     <!-- Idle / empty-library state: branded, not bare black (HANDOFF §12). -->
     <section id="idle" class="idle">
       <div class="mark" role="img" aria-label="OpenObject"></div>

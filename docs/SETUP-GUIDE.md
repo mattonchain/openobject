@@ -70,7 +70,6 @@ today's pick.
 **Order.** Choose how the Rotation plays:
 - **Sequence** — in the order you arrange them.
 - **Shuffle** — randomized, but each piece shows once before any repeats.
-- **Random** — a fresh random pick each time.
 
 **Pin one piece.** Want a single image up permanently? **Pin** it and it holds on the
 panel until you unpin.
@@ -83,10 +82,10 @@ panel until you unpin.
 Either way there's **no frame or border** — art (or the black surround) goes right to
 the edges of the panel.
 
-**Duration.** Set how long each still stays up. You set one **default** for
-everything, then change individual pieces if you want. Videos and animations always
-**loop** — they never freeze on the first frame — and play either their full length
-or a length you set.
+**Duration.** Set **one time** — in **seconds, minutes, or hours** — that applies to
+**every** piece, the same for each (no per-piece timing). Videos and animations always **loop** and never freeze on the first
+frame: a shorter one repeats to fill the time, and a clip longer than the time simply
+moves on when it's up.
 
 **Sound.** Always off. It's silent art on a wall.
 

@@ -50,12 +50,12 @@ builder-only convenience.
   **per-clip Fill override** (`object-fit: cover; object-position: center` —
   symmetric center-crop). Fit letterboxes against black — that bare stage is *not* a
   frame. v1 is center-crop only.
-- **Rotation order: Sequence / Shuffle / Random.** Sequence = the set order; Shuffle
-  = randomized pass, each clip once before repeating; Random = independent random
-  pick each advance.
+- **Rotation order: Sequence / Shuffle.** Sequence = the set order; Shuffle =
+  randomized pass, each clip once before repeating, then reshuffles. (Pure independent
+  Random was dropped — odd fit for a frame; Shuffle already covers random order.)
 - **Motion + audio: GIF/WebP/AVIF and video loop-to-fill; never freeze on frame 1.
-  Muted, always.** Video is either "full length" (play once, then advance) or a
-  fixed duration (loop to fill it).
+  Muted, always.** **One global equal-time duration** for every piece (no per-clip
+  duration); a clip longer than it is cut at the duration, shorter loops to fill.
 - **Storage: full local mirror by default.** Progressive sync: start the rotation on
   the first clip, fold the rest in without restarting/stuttering the loop. A
   buffered/least-recently-shown eviction mode is a documented seam, off by default.
