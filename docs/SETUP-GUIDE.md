@@ -70,7 +70,7 @@ tabs:
 - **Rotation** — just what's playing, in order, plus how long each piece shows and
   Sequence/Shuffle. New uploads join the Rotation automatically, so you can keep a growing
   collection and still show just today's pick by removing the rest.
-- **Settings** — sleep hours and software updates (below).
+- **Settings** — sleep hours, software updates, and frame controls (restart, shut down, Wi-Fi) (below).
 
 **Order.** Choose how the Rotation plays:
 - **Sequence** — in the order you arrange them. In the **Rotation** tab, drag a piece by
@@ -104,7 +104,14 @@ shows the OpenObject logo dimmed and stops playing, then picks the rotation back
 own. **Want it off right now?** Tap **Blank panel** at the top of the control panel — the
 art goes dark until you tap it again.
 
-**Restart or shut down.** Buttons in the control panel — no reaching behind the frame.
+**Restart or shut down** *(Settings tab)*. **Restart** reboots the frame's software and
+brings it right back — handy if something seems stuck. **Shut down** turns the frame off
+(this works once OpenObject is installed on the frame). Neither needs you to reach behind
+the panel.
+
+**Reaching the frame** *(Settings → Wi-Fi)*. The frame sets up its own Wi-Fi on first
+boot so you can put it on your home network — no keyboard needed. The Wi-Fi section also
+lists the addresses you can open the control panel at from another device.
 
 ---
 

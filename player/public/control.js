@@ -39,6 +39,12 @@ const updApply = document.getElementById('updApply');
 const dismissUpdateBtn = document.getElementById('dismissUpdateBtn');
 const updStatus = document.getElementById('updStatus');
 
+const restartBtn = document.getElementById('restartBtn');
+const shutdownBtn = document.getElementById('shutdownBtn');
+const powerStatus = document.getElementById('powerStatus');
+const reachEl = document.getElementById('reach');
+const reachList = document.getElementById('reachList');
+
 const UNIT_MS = { seconds: 1000, minutes: 60000, hours: 3600000 };
 
 // Inline icons (no webfont dependency — the frame runs offline).
@@ -531,27 +537,85 @@ function dismissUpdate() {
   setUpdStatus('No problem — you can update any time from here.');
 }
 
-// Poll /healthz until the player comes back up reporting a different commit (HANDOFF §15).
-async function waitForRestart(before) {
-  setUpdStatus('Updating… waiting for the panel to come back.');
+// ── Power & Wi-Fi (HANDOFF §10, §11) ────────────────────────────────
+function setPowerStatus(html) {
+  powerStatus.innerHTML = html || '';
+  powerStatus.hidden = !html;
+}
+
+// Real soft-restart via the supervisor — the same exit→relaunch as self-update. The version is
+// unchanged, so we watch the boot id (not the commit) to confirm the player actually bounced.
+async function restartPlayer() {
+  if (!confirm('Restart the frame now?\nThe display goes briefly to the OpenObject screen, then comes back.')) return;
+  restartBtn.disabled = true;
+  shutdownBtn.disabled = true;
+  setPowerStatus('Restarting… the panel will be back in a moment.');
+  let before = null;
+  try { before = (await fetch('/healthz', { cache: 'no-store' }).then((r) => r.json())).boot; } catch {}
+  let res = null;
+  try { res = await fetch('/api/system/restart', { method: 'POST' }).then((r) => r.json()); } catch { /* dropped by the restart */ }
+  if (res && res.needsManualRestart) {
+    restartBtn.disabled = false; shutdownBtn.disabled = false;
+    return setPowerStatus('Restart isn’t available here — start the player with the supervisor (npm start) to enable it.');
+  }
+  const h = await pollHealthz((x) => x.boot && x.boot !== before);
+  restartBtn.disabled = false; shutdownBtn.disabled = false;
+  if (h) {
+    setPowerStatus('<span class="upd-ok">✓</span> Restarted — the panel is back.');
+    await refresh();
+  } else {
+    setPowerStatus('The panel is taking longer than expected. It should return on its own — reload this page in a moment.');
+  }
+}
+
+// Phase-1 stub: there's no device to power off on the dev Mac (HANDOFF §10). Surfaces the server's
+// explanation; Phase 2 wires this to a real power-off on the frame.
+async function shutdownDevice() {
+  const res = await fetch('/api/system/shutdown', { method: 'POST' }).then((r) => r.json()).catch(() => null);
+  setPowerStatus(escapeHtml((res && res.message) || 'Shut down runs on the installed frame.'));
+}
+
+// Show how to reach this panel from another device — real and useful today (HANDOFF §11).
+async function loadSystem() {
+  const s = await fetch('/api/system').then((r) => r.json()).catch(() => null);
+  if (!s) return;
+  const items = (s.addresses || []).map((ip) => {
+    const url = `http://${ip}:${s.port}`;
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`;
+  });
+  if (s.mdns) items.push(`<span class="reach-mdns">${escapeHtml(s.mdns)} — on the installed frame</span>`);
+  reachList.innerHTML = items.join('');
+  reachEl.hidden = items.length === 0;
+}
+
+// Poll /healthz until the player is back up and a predicate holds (a new commit after an update,
+// or a new boot id after a plain restart). Returns the payload, or null on timeout. Shared by the
+// self-update and Restart flows (HANDOFF §10, §15).
+async function pollHealthz(isBack, timeoutMs = 90000) {
   const started = Date.now();
-  await sleepMs(1200); // let it actually go down first
-  while (Date.now() - started < 90000) {
+  await sleepMs(1200); // give it a moment to actually go down first
+  while (Date.now() - started < timeoutMs) {
     try {
       const h = await fetch('/healthz', { cache: 'no-store' }).then((r) => r.json());
-      if (h && h.ok && h.commit && h.commit !== before) {
-        showApply(false);
-        checkUpdateBtn.disabled = false;
-        setUpdStatus('<span class="upd-ok">✓</span> Updated — you’re now up to date.');
-        await refresh();
-        await loadUpdate(); // refreshes the version line to the new number · date · commit
-        return;
-      }
+      if (h && h.ok && isBack(h)) return h;
     } catch { /* still down — keep polling */ }
     await sleepMs(1500);
   }
+  return null;
+}
+
+async function waitForRestart(before) {
+  setUpdStatus('Updating… waiting for the panel to come back.');
+  const h = await pollHealthz((x) => x.commit && x.commit !== before);
   checkUpdateBtn.disabled = false;
-  setUpdStatus('The panel is taking longer than expected. It should return on its own — reload this page in a moment.');
+  if (h) {
+    showApply(false);
+    setUpdStatus('<span class="upd-ok">✓</span> Updated — you’re now up to date.');
+    await refresh();
+    await loadUpdate(); // refreshes the version line to the new number · date · commit
+  } else {
+    setUpdStatus('The panel is taking longer than expected. It should return on its own — reload this page in a moment.');
+  }
 }
 
 // loadSettings first (it sets pinnedId/mode the renderers read), then the two lists.
@@ -591,6 +655,8 @@ blankBtn.addEventListener('click', toggleBlank);
 checkUpdateBtn.addEventListener('click', checkUpdate);
 applyUpdateBtn.addEventListener('click', applyUpdate);
 dismissUpdateBtn.addEventListener('click', dismissUpdate);
+restartBtn.addEventListener('click', restartPlayer);
+shutdownBtn.addEventListener('click', shutdownDevice);
 
 drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('keydown', (e) => {
@@ -608,3 +674,4 @@ drop.addEventListener('drop', (e) => send(e.dataTransfer.files));
 
 refresh();
 loadUpdate(); // self-update status is independent of the library/rotation refresh
+loadSystem(); // power/Wi-Fi card: reachable addresses

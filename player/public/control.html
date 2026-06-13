@@ -105,6 +105,34 @@
           <button type="button" id="dismissUpdateBtn" class="update-dismiss">Not now</button>
         </div>
       </section>
+
+      <!-- Power — Restart (real soft-restart via the supervisor) + Shut down (hardware stub) (HANDOFF §10) -->
+      <section class="device">
+        <div class="section-title">Power</div>
+        <div class="device-row">
+          <button type="button" id="restartBtn" class="update-btn">Restart</button>
+          <span class="device-note">Restarts the frame’s software and brings it right back.</span>
+        </div>
+        <div class="device-row">
+          <button type="button" id="shutdownBtn" class="update-btn danger">Shut down</button>
+          <span class="device-note">Turns the frame off — available on the installed frame.</span>
+        </div>
+        <div class="device-status" id="powerStatus" hidden></div>
+      </section>
+
+      <!-- Wi-Fi — first-run onboarding runs on the device (Phase 2); show how to reach the panel now (HANDOFF §11) -->
+      <section class="device">
+        <div class="section-title">Wi-Fi</div>
+        <p class="device-note device-note-block">
+          On first boot, the frame makes its own <strong>OpenObject-Setup</strong> network. You join it from
+          your phone, pick your home Wi-Fi, and the frame switches over — no keyboard needed. This is handled
+          on the frame itself and becomes active once OpenObject is installed.
+        </p>
+        <div class="reach" id="reach" hidden>
+          <span class="reach-label">Reach this panel</span>
+          <div class="reach-list" id="reachList"></div>
+        </div>
+      </section>
     </section>
   </main>
 

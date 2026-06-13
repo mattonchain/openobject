@@ -9,6 +9,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const express = require('express');
 const multer = require('multer');
@@ -21,6 +22,10 @@ const RESTART_CODE = require('./src/restart-code');
 // Set by the supervisor (HANDOFF §15). When supervised, the player may exit to auto-relaunch
 // after a self-update; run directly (start:direct) it asks for a manual restart instead.
 const SUPERVISED = process.env.OO_SUPERVISED === '1';
+
+// A fresh id per process start. /healthz reports it so the control panel can confirm a restart
+// happened — even a plain Restart, where the version/commit is unchanged (HANDOFF §10).
+const BOOT_ID = crypto.randomBytes(4).toString('hex');
 
 // Express 4 doesn't catch errors thrown from async handlers — wrap them so a rejected promise
 // becomes a clean 500 instead of an unhandled rejection.
@@ -265,6 +270,44 @@ app.post('/api/update/apply', ah(async (_req, res) => {
   if (willRestart) setTimeout(() => process.exit(RESTART_CODE), 350); // let the response flush first
 }));
 
+// ── Power & network (HANDOFF §10, §11) — owner-initiated, never in the playback path ──
+// On macOS (Phase 1) only the app-level Restart can truly act; Shut down and Wi-Fi onboarding
+// are hardware actions and ship as visible-but-inert stubs until the device exists.
+
+// IPv4 LAN addresses, so the panel can show "reach me from your phone at …" (a real help today).
+function lanAddresses() {
+  const out = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const ni of list || []) if (ni.family === 'IPv4' && !ni.internal) out.push(ni.address);
+  }
+  return out;
+}
+
+app.get('/api/system', (_req, res) => {
+  res.json({
+    supervised: SUPERVISED,
+    port: PORT,
+    mdns: 'openobject.local',  // resolves on the installed frame (Phase 2 mDNS), not on the dev Mac
+    addresses: lanAddresses(), // reachable now from another device on the same network
+  });
+});
+
+// Restart the player (HANDOFF §10) — a real soft-restart via the supervisor (exit → relaunch),
+// the same mechanism self-update uses. On the device (Phase 2) systemd performs the relaunch.
+// Run un-supervised (start:direct) there's nothing to relaunch us, so we report that instead.
+app.post('/api/system/restart', (_req, res) => {
+  res.json({ ok: true, restarting: SUPERVISED, needsManualRestart: !SUPERVISED });
+  if (SUPERVISED) setTimeout(() => process.exit(RESTART_CODE), 350); // let the response flush first
+});
+
+// Shut down the device (HANDOFF §10) — a hardware action. Phase 1 has no device to power off (and
+// must never power off the dev Mac), so this is an inert, clearly-labelled stub. Phase 2 wires it
+// to a real OS power-off (e.g. `systemctl poweroff`); with BIOS Auto-Power-On the unit returns when
+// power is restored, so a true "off" is the wall outlet / smart plug (§10).
+app.post('/api/system/shutdown', (_req, res) => {
+  res.json({ ok: false, stub: true, message: 'Shut down runs on the installed frame — there’s nothing to power off in this preview.' });
+});
+
 // ── Pages ───────────────────────────────────────────────────────────
 // The kiosk display surface (HANDOFF §6). In Phase 2 Chromium boots straight to this.
 app.get('/display', (_req, res) => {
@@ -280,7 +323,7 @@ app.get('/', (_req, res) => {
 // after restarting itself: `commit` is this checkout's HEAD, so the control panel can tell a
 // new version is live (HANDOFF §15).
 app.get('/healthz', (_req, res) => {
-  res.json({ ok: true, app: 'openobject', version: require('./package.json').version, commit: updater.cachedCommitSync() });
+  res.json({ ok: true, app: 'openobject', version: require('./package.json').version, commit: updater.cachedCommitSync(), boot: BOOT_ID });
 });
 
 // JSON error responses for the API (e.g. multer rejections) instead of HTML stack traces.

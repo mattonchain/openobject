@@ -215,6 +215,29 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .update-dismiss { appearance: none; background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; padding: 8px 6px; }
 .update-dismiss:hover { color: var(--text); }
 
+/* Power + Wi-Fi cards (HANDOFF §10, §11) — same Settings-tab card vocabulary */
+.device {
+  margin-top: 16px;
+  padding: 14px 18px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.device-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.device-row .update-btn { min-width: 112px; }   /* align Restart / Shut down */
+.device-note { color: var(--muted); font-size: 13px; }
+.device-note-block { margin: 10px 0 0; line-height: 1.6; max-width: 62ch; }
+.device-note-block strong { color: var(--text); font-weight: 600; }
+.device-status { margin-top: 12px; font-size: 13px; color: var(--text); }
+.update-btn.danger { color: #ffb4b4; }
+.update-btn.danger:hover:not(:disabled) { background: #2a1c1e; border-color: #5a2a2e; color: var(--danger); }
+.reach { margin-top: 14px; }
+.reach-label { color: var(--muted); font-size: 12px; }
+.reach-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.reach-list a { color: var(--text); text-decoration: none; font-size: 14px; }
+.reach-list a:hover { text-decoration: underline; }
+.reach-list .reach-mdns { color: var(--muted); font-size: 13px; }
+
 /* Library */
 .library { margin-top: 30px; }
 .library-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }

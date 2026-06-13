@@ -188,6 +188,16 @@ The physical power button is hard to reach when wall-mounted. This is fully solv
 - **Soft restart / shutdown (web UI):** the control panel exposes **Restart** and **Shut down**, initiated from the owner's browser. Handles all intentional reboots without reaching behind the panel.
 - **Hard lockup (rare):** power-cycle the outlet; an optional ~$15 smart plug makes this a phone tap. Not required.
 
+**Built 2026-06-13 (§20).** The control panel's **Settings → Power** card ships **Restart** and
+**Shut down**. **Restart is real now**: an app-level soft-restart via the supervisor (exit →
+relaunch, the same path as self-update, §15), so it works browser-only with no hardware and behaves
+identically once systemd runs it on the device. **Shut down** is a visible-but-inert **stub** in
+Phase 1 — the dev Mac has nothing to power off and must not be powered off; Phase 2 wires it to a
+real OS power-off (e.g. `systemctl poweroff`). Phase 2 can also add a **full device reboot**
+(`systemctl reboot`) alongside the app-restart — the bigger hammer for OS-level issues. Per the
+Auto-Power-On point above, a real power-off returns when power is restored, so a true "stays off"
+is the outlet / smart plug.
+
 ---
 
 ## 11. Network & first-run onboarding
@@ -203,6 +213,12 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 **Reaching the control panel:** `http://openobject.local` (mDNS), works natively on Mac/iPhone. The setup page also **displays the raw IP** as a fallback (e.g. for Windows clients without mDNS).
 
 **Wired option:** the free Gigabit Ethernet port is a fully supported bonus, but **Wi-Fi is the baseline** — the kit must not require running a CAT5 cable, since the next owner may not be able to.
+
+**Built 2026-06-13 (§20, Phase-1 stub).** The control panel's **Settings → Wi-Fi** card explains the
+first-run onboarding flow above; the setup AP + captive page themselves are **Phase 2** (they need the
+device's networking). The card also shows **how to reach the panel now** — the live LAN address(es)
+(`http://<ip>:<port>`, from `GET /api/system`) plus the `openobject.local` name that resolves on the
+installed frame — which is real and useful in Phase 1.
 
 ---
 
@@ -416,6 +432,28 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-13 — Hardware stubs (Restart / Shut down / Wi-Fi); Phase 1 feature-complete
+- **Settings → Power card:** **Restart** ships **live** — an app-level soft-restart through the
+  supervisor (exit → relaunch, the §15 path), so it genuinely works browser-only with no hardware
+  and is identical to what systemd will run on the device. **Shut down** is a visible-but-inert
+  **stub** (can't/mustn't power off the dev Mac); Phase 2 wires a real OS power-off. Restart was
+  made live rather than a stub (Matt's call) because the supervisor already made it durable and
+  free — the old "inert stub" note predated the supervisor.
+- **Settings → Wi-Fi card:** an explanatory **stub** for the first-run OpenObject-Setup AP +
+  captive-page flow (§11; Phase 2), plus a **real** "reach this panel" helper showing the live LAN
+  address(es) and the `openobject.local` name.
+- **Backend:** `GET /api/system` (supervised flag, port, mDNS name, LAN addresses),
+  `POST /api/system/restart` (live under the supervisor; reports `needsManualRestart` under
+  start:direct), `POST /api/system/shutdown` (inert stub + message). `/healthz` gained a per-process
+  **`boot`** id so the panel can confirm a plain restart — unchanged version — actually bounced. All
+  owner-initiated, none in the playback path.
+- **Phase-2 power note recorded:** a full **device reboot** (`systemctl reboot`) and real
+  **power-off** (`systemctl poweroff`) are easy on the Linux device; with BIOS Auto-Power-On a
+  power-off returns on next power, so a true "off" is the outlet/smart plug (§10).
+- **Phase 1 is now feature-complete on macOS** — server, library/upload, control panel, display +
+  behaviors, progressive sync, sleep hours, self-update, and these stubs. Remaining work is
+  hardware/Phase 2. (Matt, 2026-06-13.)
 
 ### 2026-06-13 — Self-update UI redesign + control-panel layout
 - **Software Update card decluttered to the traditional shape** (Matt's review): a clear
