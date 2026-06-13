@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenObject — Control</title>
+  <link rel="icon" href="/assets/branding/openobject-logo-256.png">
+  <link rel="stylesheet" href="/control.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">OpenObject</span>
+    </div>
+    <a class="display-link" href="/display" target="_blank" rel="noopener">Open display ↗</a>
+  </header>
+
+  <main class="wrap">
+    <!-- Web upload — the default source (HANDOFF §8) -->
+    <section id="drop" class="dropzone" tabindex="0" role="button" aria-label="Add art">
+      <input id="file" type="file" multiple accept="image/*,video/*" hidden>
+      <p class="drop-title">Drag art here, or <span class="link">choose files</span></p>
+      <p class="drop-sub">JPEG · PNG · GIF · AVIF · WebP · MP4 · MOV · WebM</p>
+    </section>
+
+    <p id="status" class="status" hidden></p>
+
+    <!-- Library (HANDOFF §7) -->
+    <section class="library">
+      <div class="library-head">
+        <h2>Library</h2>
+        <span id="count" class="count"></span>
+      </div>
+      <div id="grid" class="grid"></div>
+      <p id="empty" class="empty" hidden>Nothing here yet — add some art above.</p>
+    </section>
+  </main>
+
+  <script src="/control.js"></script>
+</body>
+</html>

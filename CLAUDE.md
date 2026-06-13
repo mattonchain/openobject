@@ -64,7 +64,7 @@ builder-only convenience.
 - **Sleep Hours** (optional overnight blank/dim) is a v1 feature.
 
 ## Formats (v1)
-Supported: **JPEG, PNG, GIF, WebP, AVIF, MP4, MOV**. PNG transparency renders
+Supported: **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**. PNG transparency renders
 against black. **Skip** (do not convert, do not error) everything else — HEIC, SVG,
 PSD, raw, GLB, and OS noise (`.DS_Store`, office files, etc.). Uploads stay
 byte-for-byte.
@@ -95,10 +95,10 @@ understated, functional, no clutter.
 ```
 cd player && npm install && npm start
 ```
-Then open **http://localhost:3000/display** — the kiosk display (black, edge-to-edge
-stage; shows the branded idle screen until art exists). The control panel will live at
-**`/`** (currently redirects to the display until built). Display and control panel are
-separate routes so Chromium kiosk can point straight at the display later.
+Then open **http://localhost:3000/** — the control panel (web upload + Library so far).
+The kiosk display is at **/display** (black, edge-to-edge stage; the branded idle screen
+until art is in the rotation). Separate routes so Chromium kiosk can point straight at
+the display later.
 
 Uses Node's built-in **`node:sqlite`** (Node ≥ 22.5) — no native module, no build step.
 Runtime data (the library DB under `player/data/`, uploads) is gitignored (HANDOFF §8).

@@ -111,15 +111,15 @@ The display, control panel, and display-page are all **web-based and served by t
 
 **Render the display through Chromium in kiosk mode**, pointed at a local page that cycles the rotation. This is the deliberate architectural choice and it drives several requirements below.
 
-**Why the browser engine:** the owner's real-world library is a polyglot of formats — AVIF (incl. animated), animated WebP, GIF, PNG transparency, plus MP4/MOV. A browser engine decodes all of these natively with one renderer, and `fit`/`fill` plus video looping fall out of standard CSS/HTML. A native image viewer + separate video player would require bolting on a separate decoder for half these formats and special-casing the animated ones.
+**Why the browser engine:** the owner's real-world library is a polyglot of formats — AVIF (incl. animated), animated WebP, GIF, PNG transparency, plus MP4/MOV/WebM. A browser engine decodes all of these natively with one renderer, and `fit`/`fill` plus video looping fall out of standard CSS/HTML. A native image viewer + separate video player would require bolting on a separate decoder for half these formats and special-casing the animated ones.
 
 **Supported formats (v1):**
 
 | Category | Formats | Behavior |
 |---|---|---|
 | Stills | JPEG, PNG | Hold for set duration. PNG transparency renders against **black**. |
-| Animated | GIF, WebP, AVIF | Animate and **loop to fill** their set duration. **Never freeze on frame one.** |
-| Video | MP4, MOV | **Always loop.** "Full length" or fixed duration (see §7). No audio (§12). |
+| Animated | GIF, AVIF, WebP | Animate and **loop to fill** their set duration. **Never freeze on frame one.** |
+| Video | MP4, MOV, WebM | **Always loop.** "Full length" or fixed duration (see §7). No audio (§12). |
 
 **Explicitly ignored (v1):** HEIC, SVG (deferred — renders unpredictably at arbitrary canvas sizes), PSD, CR2 (raw), GLB (3D model), and all OS/working-file noise (`.DS_Store`, `.docx`, `.xlsx`, etc.). The player simply skips unsupported files — **no conversion step on ingest** (uploads stay byte-for-byte).
 
@@ -357,6 +357,25 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-12 — Upload + Library shipped; node:sqlite locked
+- **SQLite library chosen: Node's built-in `node:sqlite`** (over better-sqlite3) — zero
+  native deps, no build step, best for revivability; all DB access is contained in
+  `player/src/db.js`, so a later swap stays local. Its lone startup ExperimentalWarning is
+  silenced surgically (only that one line; every other Node warning still prints). (Matt's
+  call, 2026-06-12.)
+- **Web upload + Library built** (§7, §8): drag/tap multi-upload via `multer` (pure-JS,
+  no native build), stored **byte-for-byte** under `player/uploads/`; a format gate by
+  extension accepts JPEG/PNG/GIF/AVIF/WebP/MP4/MOV/WebM and **skips the rest silently** (§6).
+  Adds a `library` table + `GET/POST/DELETE /api/library` (delete removes the row *and*
+  the file).
+- **WebM added to the v1 video formats** (after MOV): open, royalty-free VP8/VP9/AV1 —
+  always compiled into Chromium, so it's the most reliably-playable video on a minimal
+  Linux frame (H.264/MP4 may need a codec package there). Same `kind: video` loop path,
+  so trivial to add. List order also set to AVIF before WebP. (Matt, 2026-06-12.)
+- **`/` is now the control panel** (was a redirect to `/display`); the kiosk stage stays
+  at `/display`. The display still renders only the Rotation — uploads fill the Library;
+  the rotation engine that puts them on the panel is the next checkpoint.
 
 ### 2026-06-12 — Self-update from GitHub (Phase 1)
 - **OpenObject updates itself from its GitHub repo via the control panel** (Check for

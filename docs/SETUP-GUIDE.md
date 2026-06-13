@@ -59,8 +59,8 @@ Everything happens at **http://openobject.local** — the control panel. Open it
 your Mac, iPhone, iPad, or PC.
 
 **Add art.** Drag image or video files onto the page, or tap to choose them. They
-upload straight to the frame. Supported types: **JPEG, PNG, GIF, WebP, AVIF, MP4,
-MOV**. Anything else is simply skipped — nothing is changed or converted.
+upload straight to the frame. Supported types: **JPEG, PNG, GIF, AVIF, WebP, MP4,
+MOV, WebM**. Anything else is simply skipped — nothing is changed or converted.
 
 **Your Library vs the Rotation.** Everything you upload stays in the **Library**. The
 **Rotation** is the set that's actually showing on the wall. You pick which Library
