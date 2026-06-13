@@ -322,6 +322,37 @@ Maintain **two** living documents as the build proceeds — not one written once
 ## 17. Future enhancements (documented seams, not built in v1)
 
 - **On-chain / NFT source.** The marquee future feature. Reading on-chain art is a **resolution problem, not a display problem**: an NFT is a pointer (contract address + token ID) whose `tokenURI` → metadata → media URL resolves to a file — and that file is a **JPEG/PNG/GIF/MP4/AVIF the v1 display engine already handles**. Intended approach: a **resolver/connector API** (e.g. Alchemy, QuickNode, Reservoir, OpenSea) so the player does *not* run nodes, RPC endpoints, or IPFS gateways itself — connect once, the service returns a media URL, the player downloads it. This slots in as a **third source type** alongside web upload and pull-from-share; everything downstream (sync, library, rotation, pin, fit/fill, loop) is unchanged. **v1 action:** keep the source layer a clean interface so this is a plug-in later, not a teardown. Build none of it now.
+- **Web / HTML art pieces (interactive & generative).** *(Working name: "HTML" content — to be
+  renamed as we learn the space.)* Some art is not a still or a clip but a **live web page** —
+  a generative/interactive `index.html` (often Arweave/IPFS-hosted) that renders on a canvas
+  and may expose its own controls. **First target use case:** Bryan Brinkman's *"Azulejo Galo"*
+  (an Arweave `index.html` carrying query params for token/wallet/etc.), where clicking the
+  piece reveals a **"Toggle Rotation"** control that animates it. Intended UX: the owner
+  **pastes a URL**, optionally assigns a **name** and **special functions** (e.g. auto-engage
+  "Toggle Rotation"); from then on the piece is a normal library card — Rotation, Pin, duration,
+  Fit/Fill behave as usual.
+    - **Approach: a curated by-name handler registry, not a generic web automator.** We can't
+      drive the infinite ways web content is built and won't try. A small **registry of handlers
+      for known/featured collections** maps a recognized collection (or URL pattern) → its
+      display name + artist + any **bespoke functions** (hide the page's own UI, programmatically
+      engage a control, set a motion query-param, …). Unknown URLs embed as a plain page; only
+      recognized collections get white-glove handling — onboarded by **adding a handler, not
+      changing the engine**.
+    - **Constraints to resolve when built:** a new render kind **`web`** (iframe / Chromium
+      webview) alongside still/animated/video; **Fit/Fill is fuzzy** for a page with no intrinsic
+      aspect ratio (likely "fill the stage," sized per-collection in the handler); **local-first
+      tension (§9)** — a remote URL puts the network in the playback path, so it may need a
+      snapshot/cache or be accepted as the one online-dependent kind; **driving the page's own
+      controls is cross-origin-blocked** from our page, so automated control (the "Toggle
+      Rotation" trigger) most likely rides on the **Chromium kiosk layer (Phase 2)** via script
+      injection or known URL params, while the paste-URL/name/functions UX and the `web` library
+      row could land in Phase 1; and **trust/security** — remote HTML runs untrusted code on the
+      frame, so sandbox the embed and treat the curated registry as the trusted path.
+
+  Slots into the **pluggable source layer (§8)** as another way a piece enters the library;
+  everything downstream (Rotation, Pin, duration) is unchanged. Related to but **distinct from the
+  on-chain/NFT source** above (that resolves a pointer to a *media file* the v1 engine already
+  plays; this renders a *live page*). **v1 action: log it; build none of it now.**
 - **Adjustable crop position** for Fill (e.g. keep the top of portraits). v1 is center-crop only.
 - **SVG support.** Trivial to add under the browser-render approach if wanted later; deferred because it renders unpredictably at arbitrary sizes.
 - **Global "allow audio" toggle.** v1 is muted-always.
@@ -358,6 +389,16 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-13 — Logged: Web/HTML art pieces (future seam, §17)
+- **Logged a future enhancement — a "HTML" content type** (working name): add a **live web
+  page** (generative/interactive `index.html`, e.g. Arweave-hosted) as a piece via
+  **paste-URL + optional name + special functions**, handled through a **curated by-name
+  registry for featured collections** (first target: Bryan Brinkman's *"Azulejo Galo"* and
+  its in-page "Toggle Rotation" control). It's a new render kind (`web`, iframe/webview) and a
+  §8 source-layer seam — distinct from the on-chain/NFT seam (which resolves to a media file).
+  **Not built**; captured in §17 with its constraints (Fit/Fill semantics, §9 local-first
+  tension, cross-origin control → likely Phase-2 kiosk, sandboxing). (Matt, 2026-06-13.)
 
 ### 2026-06-13 — Rotation curation (membership + manual order); settings bar redesign
 - **The Rotation is now a curated subset, not the whole Library** — completes the §7
