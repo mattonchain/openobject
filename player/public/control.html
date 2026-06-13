@@ -15,11 +15,14 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span class="brand-name">OpenObject</span>
     </div>
-    <a class="display-link" href="/display" target="_blank" rel="noopener">Open display ↗</a>
+    <div class="topbar-actions">
+      <button type="button" id="blankBtn" class="blank-toggle" aria-pressed="false" title="Turn the art off now, until you switch it back">Blank panel</button>
+      <a class="display-link" href="/display" target="_blank" rel="noopener">Open display ↗</a>
+    </div>
   </header>
 
   <main class="wrap">
-    <!-- Web upload — the default source (HANDOFF §8) -->
+    <!-- Web upload — the default source, pinned above the tabs (HANDOFF §8) -->
     <section id="drop" class="dropzone" tabindex="0" role="button" aria-label="Add art">
       <input id="file" type="file" multiple accept="image/*,video/*" hidden>
       <p class="drop-title">Drag art here, or <span class="link">choose files</span></p>
@@ -28,39 +31,16 @@
 
     <p id="status" class="status" hidden></p>
 
-    <!-- Rotation settings — global, equal time for every piece (HANDOFF §7) -->
-    <section class="settings">
-      <div class="set-group">
-        <span class="set-label">Each piece shows for</span>
-        <div class="set-controls">
-          <div class="stepper">
-            <button type="button" id="durDown" class="step" aria-label="Less time">−</button>
-            <input id="duration" type="number" min="1" step="1" inputmode="numeric" aria-label="Duration amount">
-            <button type="button" id="durUp" class="step" aria-label="More time">+</button>
-          </div>
-          <div class="seg" id="unitSeg" role="group" aria-label="Duration unit">
-            <button type="button" data-unit="seconds">sec</button>
-            <button type="button" data-unit="minutes">min</button>
-            <button type="button" data-unit="hours">hr</button>
-          </div>
-        </div>
-      </div>
-      <div class="set-group">
-        <span class="set-label">Order</span>
-        <div class="seg" id="modeSeg" role="group" aria-label="Rotation order">
-          <button type="button" data-mode="sequence">Sequence</button>
-          <button type="button" data-mode="shuffle">Shuffle</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Library (everything uploaded) vs Rotation (the curated, ordered subset on the panel) — HANDOFF §7 -->
-    <nav class="tabs" role="tablist" aria-label="Library and Rotation">
+    <!-- Library (everything uploaded) · Rotation (curated subset + how it cycles) · Settings -->
+    <nav class="tabs" role="tablist" aria-label="Sections">
       <button type="button" class="tab" id="tabLibrary" role="tab" aria-selected="true" aria-controls="panelLibrary">
         Library <span class="tab-count" id="libCount"></span>
       </button>
       <button type="button" class="tab" id="tabRotation" role="tab" aria-selected="false" aria-controls="panelRotation">
         Rotation <span class="tab-count" id="rotCount"></span>
+      </button>
+      <button type="button" class="tab" id="tabSettings" role="tab" aria-selected="false" aria-controls="panelSettings">
+        Settings
       </button>
     </nav>
 
@@ -70,9 +50,46 @@
     </section>
 
     <section class="panel" id="panelRotation" role="tabpanel" aria-labelledby="tabRotation" hidden>
+      <!-- How the rotation cycles — one global equal-time duration; order (HANDOFF §7, §12) -->
+      <section class="settings">
+        <div class="set-group">
+          <span class="set-label">Each piece shows for</span>
+          <div class="set-controls">
+            <div class="stepper">
+              <button type="button" id="durDown" class="step" aria-label="Less time">−</button>
+              <input id="duration" type="number" min="1" step="1" inputmode="numeric" aria-label="Duration amount">
+              <button type="button" id="durUp" class="step" aria-label="More time">+</button>
+            </div>
+            <div class="seg" id="unitSeg" role="group" aria-label="Duration unit">
+              <button type="button" data-unit="seconds">sec</button>
+              <button type="button" data-unit="minutes">min</button>
+              <button type="button" data-unit="hours">hr</button>
+            </div>
+          </div>
+        </div>
+        <div class="set-group">
+          <span class="set-label">Order</span>
+          <div class="seg" id="modeSeg" role="group" aria-label="Rotation order">
+            <button type="button" data-mode="sequence">Sequence</button>
+            <button type="button" data-mode="shuffle">Shuffle</button>
+          </div>
+        </div>
+      </section>
+
       <p id="rotHint" class="rot-hint" hidden></p>
       <div id="rotList" class="rot-list"></div>
       <p id="rotEmpty" class="empty" hidden>No pieces in the rotation yet — add some from the Library tab.</p>
+    </section>
+
+    <section class="panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings" hidden>
+      <!-- Sleep hours — optional overnight/away blanking, up to two daily windows (HANDOFF §13) -->
+      <section class="sleep">
+        <div class="sleep-head">
+          <span class="set-label">Sleep hours</span>
+          <span class="sleep-status" id="sleepStatus"></span>
+        </div>
+        <div class="sleep-ranges" id="sleepRanges"></div>
+      </section>
     </section>
   </main>
 

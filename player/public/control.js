@@ -19,12 +19,18 @@ const modeSeg = document.getElementById('modeSeg');
 
 const tabLibrary = document.getElementById('tabLibrary');
 const tabRotation = document.getElementById('tabRotation');
+const tabSettings = document.getElementById('tabSettings');
 const panelLibrary = document.getElementById('panelLibrary');
 const panelRotation = document.getElementById('panelRotation');
+const panelSettings = document.getElementById('panelSettings');
 const rotList = document.getElementById('rotList');
 const rotCount = document.getElementById('rotCount');
 const rotEmpty = document.getElementById('rotEmpty');
 const rotHint = document.getElementById('rotHint');
+
+const blankBtn = document.getElementById('blankBtn');
+const sleepRangesEl = document.getElementById('sleepRanges');
+const sleepStatus = document.getElementById('sleepStatus');
 
 const UNIT_MS = { seconds: 1000, minutes: 60000, hours: 3600000 };
 
@@ -33,11 +39,14 @@ const GRIP = '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor
 const CHEV_UP = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
 const CHEV_DOWN = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const X_MARK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-11"/></svg>';
 
 let pinnedId = null;
 let mode = 'sequence';
 let durationUnit = 'seconds';
 let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓ moves
+let sleepRanges = []; // up to two daily blank windows (HANDOFF §13)
+let manualBlank = false; // instant "Blank panel" override
 
 const fmtBytes = (n) => {
   if (n < 1024) return n + ' B';
@@ -254,6 +263,10 @@ async function loadSettings() {
   mode = s.mode;
   setSeg(modeSeg, 'mode', mode);
   pinnedId = s.pinnedId;
+  sleepRanges = (s.sleepRanges || []).map((r) => ({ enabled: !!r.enabled, start: r.start, end: r.end }));
+  manualBlank = !!s.manualBlank;
+  renderSleep();
+  renderBlank();
 }
 
 const saveSettings = (patch) =>
@@ -269,6 +282,115 @@ function pushDuration() {
   saveSettings({ durationMs: value * UNIT_MS[durationUnit] });
 }
 
+// ── Sleep hours (HANDOFF §13) — up to two daily blank windows, shown on a 12h clock ──
+const pad2 = (n) => String(n).padStart(2, '0');
+const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.round(Number(v) || lo)));
+const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+const to24 = (h12, min, ap) => pad2((h12 % 12) + (ap === 'PM' ? 12 : 0)) + ':' + pad2(min);
+const from24 = (hhmm) => { const [H, M] = hhmm.split(':').map(Number); return { h12: H % 12 || 12, min: M, ap: H >= 12 ? 'PM' : 'AM' }; };
+const fmt12 = (hhmm) => { const t = from24(hhmm); return `${t.h12}:${pad2(t.min)} ${t.ap}`; };
+const isOvernight = (r) => toMin(r.start) > toMin(r.end);
+const inWin = (nowMin, r) => {
+  const s = toMin(r.start), e = toMin(r.end);
+  if (s === e) return false;
+  return s < e ? nowMin >= s && nowMin < e : nowMin >= s || nowMin < e;
+};
+
+function timeBlock(which, hhmm) {
+  const t = from24(hhmm);
+  return `<span class="time12 ${which}">
+      <input class="t-h" type="number" min="1" max="12" inputmode="numeric" value="${t.h12}" aria-label="Hour">
+      <span class="colon">:</span>
+      <input class="t-m" type="number" min="0" max="59" inputmode="numeric" value="${pad2(t.min)}" aria-label="Minute">
+      <span class="seg ampm" role="group" aria-label="AM or PM">
+        <button type="button" data-ap="AM"${t.ap === 'AM' ? ' class="on"' : ''}>AM</button>
+        <button type="button" data-ap="PM"${t.ap === 'PM' ? ' class="on"' : ''}>PM</button>
+      </span>
+    </span>`;
+}
+
+function sleepRow(r) {
+  const el = document.createElement('div');
+  el.className = 'sleep-row' + (r.enabled ? '' : ' off');
+  el.innerHTML = `
+    <button class="sleep-cbx${r.enabled ? ' on' : ''}" aria-pressed="${r.enabled}" aria-label="Enable this sleep time">${r.enabled ? CHECK : ''}</button>
+    ${timeBlock('start', r.start)}
+    <span class="to">→</span>
+    ${timeBlock('end', r.end)}
+    <span class="overnight"${isOvernight(r) ? '' : ' hidden'}>overnight</span>`;
+  const cbx = el.querySelector('.sleep-cbx');
+  cbx.addEventListener('click', () => {
+    const on = cbx.getAttribute('aria-pressed') !== 'true';
+    cbx.setAttribute('aria-pressed', String(on));
+    cbx.classList.toggle('on', on);
+    cbx.innerHTML = on ? CHECK : '';
+    el.classList.toggle('off', !on);
+    commitSleep();
+  });
+  el.querySelectorAll('.t-h, .t-m').forEach((inp) =>
+    inp.addEventListener('change', () => {
+      inp.value = inp.classList.contains('t-h') ? clampInt(inp.value, 1, 12) : pad2(clampInt(inp.value, 0, 59));
+      commitSleep();
+    })
+  );
+  el.querySelectorAll('.ampm').forEach((seg) =>
+    seg.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', () => { setSeg(seg, 'ap', b.dataset.ap); commitSleep(); })
+    )
+  );
+  return el;
+}
+
+const readTime = (block) =>
+  to24(
+    clampInt(block.querySelector('.t-h').value, 1, 12),
+    clampInt(block.querySelector('.t-m').value, 0, 59),
+    block.querySelector('.ampm .on')?.dataset.ap || 'AM'
+  );
+const readRow = (row) => ({
+  enabled: row.querySelector('.sleep-cbx').getAttribute('aria-pressed') === 'true',
+  start: readTime(row.querySelector('.time12.start')),
+  end: readTime(row.querySelector('.time12.end')),
+});
+
+function renderSleep() {
+  sleepRangesEl.replaceChildren(...sleepRanges.map(sleepRow));
+  renderSleepStatus();
+}
+
+async function commitSleep() {
+  const rows = [...sleepRangesEl.querySelectorAll('.sleep-row')];
+  sleepRanges = rows.map(readRow);
+  rows.forEach((row, i) => { row.querySelector('.overnight').hidden = !isOvernight(sleepRanges[i]); });
+  renderSleepStatus();
+  await saveSettings({ sleepRanges });
+}
+
+function renderSleepStatus() {
+  if (manualBlank) { sleepStatus.textContent = 'Blanked now'; return; }
+  const on = sleepRanges.filter((r) => r.enabled);
+  if (!on.length) { sleepStatus.textContent = ''; return; }
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const active = on.find((r) => inWin(nowMin, r));
+  if (active) { sleepStatus.textContent = 'Asleep until ' + fmt12(active.end); return; }
+  const next = on.reduce(
+    (best, r) => { const d = (toMin(r.start) - nowMin + 1440) % 1440; return d < best.d ? { d, start: r.start } : best; },
+    { d: Infinity, start: null }
+  );
+  sleepStatus.textContent = 'Next sleep at ' + fmt12(next.start);
+}
+
+function renderBlank() {
+  blankBtn.setAttribute('aria-pressed', String(manualBlank));
+  blankBtn.textContent = manualBlank ? 'Blanked' : 'Blank panel';
+  renderSleepStatus();
+}
+async function toggleBlank() {
+  manualBlank = !manualBlank;
+  renderBlank();
+  await saveSettings({ manualBlank });
+}
+
 // loadSettings first (it sets pinnedId/mode the renderers read), then the two lists.
 async function refresh() {
   await loadSettings();
@@ -276,15 +398,19 @@ async function refresh() {
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────
+const TABS = {
+  library: [tabLibrary, panelLibrary],
+  rotation: [tabRotation, panelRotation],
+  settings: [tabSettings, panelSettings],
+};
 function switchTab(name) {
-  const lib = name === 'library';
-  tabLibrary.setAttribute('aria-selected', String(lib));
-  tabRotation.setAttribute('aria-selected', String(!lib));
-  panelLibrary.hidden = !lib;
-  panelRotation.hidden = lib;
+  for (const [key, [tab, panel]] of Object.entries(TABS)) {
+    const on = key === name;
+    tab.setAttribute('aria-selected', String(on));
+    panel.hidden = !on;
+  }
 }
-tabLibrary.addEventListener('click', () => switchTab('library'));
-tabRotation.addEventListener('click', () => switchTab('rotation'));
+Object.keys(TABS).forEach((name) => TABS[name][0].addEventListener('click', () => switchTab(name)));
 
 // ── Wiring ──────────────────────────────────────────────────────────
 durDown.addEventListener('click', () => { durationEl.value = Math.max(1, (Number(durationEl.value) || 1) - 1); pushDuration(); });
@@ -297,6 +423,7 @@ unitSeg.querySelectorAll('button').forEach((b) =>
 modeSeg.querySelectorAll('button').forEach((b) =>
   b.addEventListener('click', () => { mode = b.dataset.mode; setSeg(modeSeg, 'mode', mode); saveSettings({ mode }); loadRotation(); })
 );
+blankBtn.addEventListener('click', toggleBlank);
 
 drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('keydown', (e) => {

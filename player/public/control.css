@@ -98,6 +98,77 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .seg button:hover:not(.on) { color: var(--text); background: #242428; }
 .seg button.on { background: #2c2c33; color: var(--text); }
 
+/* Top-bar actions — manual Blank panel + Open display */
+.topbar-actions { display: flex; align-items: center; gap: 16px; }
+.blank-toggle {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.blank-toggle:hover { color: var(--text); }
+.blank-toggle[aria-pressed="true"] { background: #2a2410; border-color: #5a4d1f; color: #ffd479; }
+
+/* Sleep hours (HANDOFF §13) — up to two daily windows, each independently enabled */
+.sleep {
+  margin-top: 16px;
+  padding: 14px 18px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.sleep-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.sleep-status { color: var(--muted); font-size: 12px; }
+.sleep-ranges { display: flex; flex-direction: column; }
+.sleep-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 11px 0; }
+.sleep-row + .sleep-row { border-top: 1px solid var(--line); }
+.sleep-row.off .time12, .sleep-row.off .to, .sleep-row.off .overnight { opacity: 0.4; }
+.sleep-cbx {
+  appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sleep-cbx:hover { border-color: #4a4a52; }
+.sleep-cbx.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.time12 { display: inline-flex; align-items: center; gap: 5px; }
+.time12 input {
+  width: 40px;
+  height: 32px;
+  text-align: center;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+.time12 input:focus { outline: none; border-color: #4a4a52; }
+.time12 .colon { color: var(--muted); }
+.seg.ampm button { padding: 6px 10px; font-size: 13px; }
+.to { color: var(--muted); }
+.overnight {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
 /* Library */
 .library { margin-top: 30px; }
 .library-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
@@ -218,6 +289,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
 .tab-count { color: var(--muted); font-size: 12px; font-weight: 400; }
 .panel { margin-top: 18px; }
+.panel .settings { margin: 0 0 18px; }  /* duration/order now lives inside the Rotation tab */
+.panel .sleep { margin-top: 0; }         /* sleep hours now lives inside the Settings tab */
 
 /* Rotation list — the curated, ordered subset on the panel */
 .rot-hint { color: var(--muted); font-size: 13px; margin: 0 2px 14px; }

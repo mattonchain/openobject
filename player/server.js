@@ -30,6 +30,15 @@ const DEFAULT_MODE = 'sequence';
 const MODES = new Set(['sequence', 'shuffle']);
 const FITS = new Set(['fit', 'fill']);
 
+// Sleep hours (HANDOFF §13): up to two daily windows, each independently enabled; the panel
+// blanks to the dimmed mark while inside an enabled window (or while manually blanked). Off
+// by default. Times are stored 24h "HH:MM"; the control panel shows them on a 12h clock.
+const DEFAULT_SLEEP_RANGES = [
+  { enabled: false, start: '22:00', end: '07:00' },
+  { enabled: false, start: '09:00', end: '17:00' },
+];
+const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 db.initDb(); // ensure the SQLite store + uploads dir exist before serving
 
 const app = express();
@@ -121,20 +130,42 @@ app.put('/api/rotation/order', (req, res) => {
   res.json(db.reorderRotation(order));
 });
 
-// ── Rotation settings (global, equal-time) + Pin ────────────────────
+// ── Rotation settings (global, equal-time) + Pin + Sleep hours ──────
+const toMinutes = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+function inWindow(nowMin, startMin, endMin) {
+  if (startMin === endMin) return false;        // zero-length window = off
+  return startMin < endMin
+    ? nowMin >= startMin && nowMin < endMin      // same-day window
+    : nowMin >= startMin || nowMin < endMin;     // wraps past midnight (overnight)
+}
+function isAsleep(settings, now = new Date()) {
+  if (settings.manualBlank) return true;         // manual Blank overrides the schedule (HANDOFF §13)
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return settings.sleepRanges.some((r) => r.enabled && inWindow(nowMin, toMinutes(r.start), toMinutes(r.end)));
+}
+function readSleepRanges() {
+  try {
+    const v = JSON.parse(db.getSetting('sleep_ranges', ''));
+    if (Array.isArray(v)) return v.map((r) => ({ enabled: !!r.enabled, start: String(r.start), end: String(r.end) }));
+  } catch { /* not set yet / malformed — use defaults */ }
+  return DEFAULT_SLEEP_RANGES.map((r) => ({ ...r }));
+}
+
 function currentSettings() {
   const pin = db.getSetting('pinned_id', '');
   return {
     durationMs: Number(db.getSetting('duration_ms', DEFAULT_DURATION_MS)) || DEFAULT_DURATION_MS,
     mode: db.getSetting('rotation_mode', DEFAULT_MODE),
     pinnedId: pin ? Number(pin) : null, // one piece held permanently (HANDOFF §7), or null
+    sleepRanges: readSleepRanges(),     // up to two daily blank windows (HANDOFF §13)
+    manualBlank: db.getSetting('manual_blank', '') === '1', // instant "Blank panel" override
   };
 }
 
 app.get('/api/settings', (_req, res) => res.json(currentSettings()));
 
 app.put('/api/settings', (req, res) => {
-  const { durationMs, mode } = req.body || {};
+  const { durationMs, mode, sleepRanges, manualBlank } = req.body || {};
   if (durationMs !== undefined) {
     const ms = Number(durationMs);
     if (!Number.isFinite(ms) || ms < 1000) return res.status(400).json({ error: 'durationMs must be >= 1000' });
@@ -143,6 +174,18 @@ app.put('/api/settings', (req, res) => {
   if (mode !== undefined) {
     if (!MODES.has(mode)) return res.status(400).json({ error: 'mode must be sequence|shuffle' });
     db.setSetting('rotation_mode', mode);
+  }
+  if (sleepRanges !== undefined) {
+    const ok =
+      Array.isArray(sleepRanges) &&
+      sleepRanges.length <= 2 &&
+      sleepRanges.every((r) => r && typeof r.enabled === 'boolean' && HHMM.test(r.start) && HHMM.test(r.end));
+    if (!ok) return res.status(400).json({ error: 'sleepRanges must be up to two {enabled, start:"HH:MM", end:"HH:MM"}' });
+    db.setSetting('sleep_ranges', JSON.stringify(sleepRanges.map((r) => ({ enabled: r.enabled, start: r.start, end: r.end }))));
+  }
+  if (manualBlank !== undefined) {
+    if (typeof manualBlank !== 'boolean') return res.status(400).json({ error: 'manualBlank must be a boolean' });
+    db.setSetting('manual_blank', manualBlank ? '1' : '');
   }
   res.json(currentSettings());
 });
@@ -159,12 +202,19 @@ app.delete('/api/pin', (_req, res) => {
   res.json(currentSettings());
 });
 
-// What the display plays: a pinned piece overrides everything — held permanently, even if
-// it isn't in the Rotation (HANDOFF §7); otherwise the curated Rotation in order.
+// What the display plays: while asleep (a sleep window or manual Blank, §13) it serves
+// `asleep:true` and the display shows the dimmed mark. Otherwise a pinned piece overrides
+// everything — held permanently even if not in the Rotation (§7) — else the Rotation in order.
 app.get('/api/display', (_req, res) => {
   const settings = currentSettings();
   const pinned = settings.pinnedId != null ? db.getLibraryItem(settings.pinnedId) : null;
-  res.json({ items: pinned ? [pinned] : db.listRotation(), ...settings });
+  res.json({
+    items: pinned ? [pinned] : db.listRotation(),
+    durationMs: settings.durationMs,
+    mode: settings.mode,
+    pinnedId: settings.pinnedId,
+    asleep: isAsleep(settings),
+  });
 });
 
 // ── Pages ───────────────────────────────────────────────────────────

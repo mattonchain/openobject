@@ -217,6 +217,7 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 | Fit/Fill default | **Fit** (original aspect ratio); settable | Applies to new clips; per-clip override always available. |
 | Display duration | **Settable global** (seconds / minutes / hours) | One equal-time duration for **every** piece; no per-clip override. |
 | Rotation order | **Sequence** | Sequence / Shuffle (§7); settable. |
+| Sleep hours | **Off** (no windows enabled) | Up to two daily blank windows (12h clock) + manual "Blank panel"; dimmed-logo sleep screen (§13). |
 | Updates | **Manual check; track `main`** | Self-update from GitHub via the control panel (§15). Owner-initiated; fast-forward only. |
 
 ---
@@ -225,7 +226,18 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet — but the control 
 
 An **optional schedule to blank or dim the panel overnight** (configurable start/end). The panel otherwise runs 24/7; this is a longevity and preference feature (the owner dislikes it running at night). Build in v1. When asleep, the panel is blanked/dimmed; it resumes the rotation on schedule. Pairs cleanly with the display layer (no playback during the sleep window).
 
-**Sleep screen (design intent, not yet built — Matt, 2026-06-13):** the asleep state should be a **sister to the idle/boot screen** — the same OpenObject mark, but **dimmed**, and **without** the "add art at openobject.local" instruction line (just the quiet mark, no further text). A small **countdown to wake time** is a possible touch, to be weighed against implementation cost. A manual on-demand **Blank/Pause** toggle (turn the art off now, outside the schedule) is the natural companion control and will be considered alongside this.
+**Built 2026-06-13.** Up to **two daily windows**, each with its own **enable checkbox** —
+covering both "I'm at work" and "I'm asleep." Times are entered on a **12-hour clock with an
+AM/PM toggle** and may cross midnight (an auto **"overnight"** tag flags a window that wraps).
+A manual **"Blank panel"** toggle in the control-panel header turns the art off on demand,
+independent of the schedule — the companion to scheduled sleep, and the answer to "how do I
+stop the display right now?". While asleep, **playback stops** and the panel shows the **sleep
+screen**: the same boot/idle mark at the **same size and placement, dimmed (~0.2 opacity) and
+with no caption** underneath. To rest the panel it does a slow, imperceptible **pixel-shift**
+every ~90 s (the standard anti-burn-in technique — chosen over a periodic fade as sufficient on
+its own; on this LCD it's belt-and-suspenders anyway). The server computes `asleep` (schedule
+or manual) and the display renders on that one signal, flipping within ~5 s of a boundary.
+Phase 1 blanks in **software**; dimming the actual **backlight** is a Phase 2 hardware hook.
 
 ---
 
@@ -389,6 +401,26 @@ The original software is a standard Android app on Android-x86. To manually rese
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-13 — Sleep hours built (+ manual Blank)
+- **Sleep hours shipped (§13):** up to **two daily blank windows**, each with an **enable
+  checkbox** (work + night); times on a **12-hour clock with an AM/PM** segmented toggle,
+  wrap-past-midnight supported with an auto **"overnight"** tag. Off by default.
+- **Manual "Blank panel"** toggle added to the header — art off on demand, independent of the
+  schedule (the parked Blank/Pause companion; it lives in the header we said we'd revisit).
+- **Sleep screen** mirrors the boot/idle mark exactly — same size/placement, **dimmed, no
+  caption** — with a slow **pixel-shift** (~90 s) for burn-in insurance. Pixel-shift was chosen
+  over a periodic fade (the standard technique, sufficient on its own; Matt's call). Playback
+  stops while asleep and resumes on wake.
+- **Server-computed `asleep`** (from settings `sleep_ranges` + `manual_blank`) is returned in
+  `/api/display`; `PUT /api/settings` gained validated `sleepRanges` + `manualBlank`. No DB
+  change — both are key/value settings. Phase 1 blanks in software; backlight dimming is a
+  Phase 2 hook. (Matt, 2026-06-13.)
+- **Control panel reorganized to three tabs — Library · Rotation · Settings.** Sleep hours
+  moved into the new **Settings** tab (its future home for self-update, restart/shutdown,
+  Wi-Fi onboarding); the **duration/order** bar moved into the **Rotation** tab (it governs how
+  the rotation cycles). The top of the page is now just upload + tabs. Sleep mark dimmed from
+  0.3 to **~0.2**. (Matt, 2026-06-13.)
 
 ### 2026-06-13 — Logged: Web/HTML art pieces (future seam, §17)
 - **Logged a future enhancement — a "HTML" content type** (working name): add a **live web

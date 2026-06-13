@@ -23,6 +23,8 @@ let front = 0; // which layer is currently visible
 let timer = null;
 let started = false;
 let shuffleQueue = [];
+let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HANDOFF §13)
+let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
 
 const sig = (item) => item.fit + '|' + item.filename;
 const once = (fn) => {
@@ -111,9 +113,42 @@ function showIdle() {
   idle.classList.remove('hidden');
 }
 
+// Sleep Hours / manual Blank (HANDOFF §13): stop playback and show the boot/idle mark,
+// dimmed and text-free, drifting a few pixels on a slow cycle so it can't sit on the panel.
+function enterSleep() {
+  if (sleeping) return;
+  sleeping = true;
+  showIdle();                    // tear down playback + show the mark
+  idle.classList.add('asleep');  // dim it and hide the caption (display.css)
+  startPixelShift();
+}
+function exitSleep() {
+  sleeping = false;
+  stopPixelShift();
+  idle.classList.remove('asleep'); // playback resumes via the normal flow below
+}
+function startPixelShift() {
+  stopPixelShift();
+  const drift = () => {
+    const x = Math.round((Math.random() * 2 - 1) * 6);
+    const y = Math.round((Math.random() * 2 - 1) * 6);
+    idle.style.transform = `translate(${x}px, ${y}px)`;
+  };
+  drift();
+  shiftTimer = setInterval(drift, 90000); // a few px every 90s, gliding via the CSS transition
+}
+function stopPixelShift() {
+  if (shiftTimer) { clearInterval(shiftTimer); shiftTimer = null; }
+  idle.style.transform = '';
+}
+
 function apply(state) {
   durationMs = state.durationMs;
   mode = state.mode;
+
+  if (state.asleep) return enterSleep();  // Sleep Hours / manual Blank (HANDOFF §13)
+  if (sleeping) exitSleep();              // just woke — fall through and resume the rotation
+
   // A pinned piece collapses the rotation to just itself — held permanently (HANDOFF §7).
   const pinned = state.pinnedId != null ? state.items.find((i) => i.id === state.pinnedId) : null;
   items = pinned ? [pinned] : state.items;

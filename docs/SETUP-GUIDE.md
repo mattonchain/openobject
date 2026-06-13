@@ -63,13 +63,14 @@ upload straight to the frame. Supported types: **JPEG, PNG, GIF, AVIF, WebP, MP4
 MOV, WebM**. Anything else is simply skipped — nothing is changed or converted.
 
 **Your Library vs the Rotation.** Everything you upload stays in the **Library**. The
-**Rotation** is the set that's actually showing on the wall. The control panel has two
-tabs for this:
+**Rotation** is the set that's actually showing on the wall. The control panel has three
+tabs:
 - **Library** — everything you've uploaded. Tap the small circle in the top-right
   corner of any piece to add it to (✓) or remove it from (+) the Rotation.
-- **Rotation** — just what's playing, in order. New uploads join the Rotation
-  automatically, so you can keep a growing collection and still show just today's pick by
-  removing the rest.
+- **Rotation** — just what's playing, in order, plus how long each piece shows and
+  Sequence/Shuffle. New uploads join the Rotation automatically, so you can keep a growing
+  collection and still show just today's pick by removing the rest.
+- **Settings** — sleep hours (below), with more to come.
 
 **Order.** Choose how the Rotation plays:
 - **Sequence** — in the order you arrange them. In the **Rotation** tab, drag a piece by
@@ -96,8 +97,12 @@ moves on when it's up.
 
 **Sound.** Always off. It's silent art on a wall.
 
-**Sleep hours.** Optionally have the panel go dark overnight and come back on a
-schedule.
+**Sleep hours** *(in the **Settings** tab)*. Optionally have the panel rest on a schedule —
+you get **two time ranges**, each with its own on/off checkbox, so you can cover both "while I'm at work"
+and "overnight." Set them on a normal **12-hour clock** (AM/PM). While asleep, the panel
+shows the OpenObject logo dimmed and stops playing, then picks the rotation back up on its
+own. **Want it off right now?** Tap **Blank panel** at the top of the control panel — the
+art goes dark until you tap it again.
 
 **Restart or shut down.** Buttons in the control panel — no reaching behind the frame.
 
