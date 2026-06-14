@@ -24,8 +24,9 @@ right place.
 - **USB keyboard** — Logitech **K400 Plus** (a keyboard with a built-in touchpad, one
   USB receiver — so you don't need a separate mouse).
 - **USB flash drive**, 16 GB or larger — for the installer.
-- **External USB drive**, 128 GB or larger — _only_ if you want to back up the
-  original software first.
+- **External USB drive**, 128 GB or larger — **optional**, _only_ if you want to make a
+  one-time backup of the original software first (a USB SSD is ideal; exFAT format works
+  everywhere). See the **[backup appendix](appendix-backup-original.md)**.
 
 ---
 
@@ -44,8 +45,8 @@ right place.
    hides the prompt, so just tap `Del` a few times while the screen is still black.)
    Set it to boot from the USB drive. _(There's no "Auto Power On" to switch on — this
    frame already starts by itself whenever it has power.)_
-3. Boot the installer. *(Optional: back up the original software first if you have
-   the external drive.)*
+3. Boot the installer. *(Optional: to keep a copy of the original software first, see
+   the [backup appendix](appendix-backup-original.md) — most owners skip this.)*
 4. Install OpenObject and wait for the frame to show the **OpenObject** screen.
 5. On your phone, join the temporary **OpenObject-Setup** Wi-Fi network. A setup page
    opens automatically — pick your home Wi-Fi and enter the password. The frame
@@ -150,5 +151,6 @@ and the frame just needs to be online to check. Not ready? **Not now** dismisses
 ## Want the original software back?
 
 If you'd rather return to the original "White Walls" experience, see
-**[the White Walls reset appendix](appendix-whitewalls-reset.md)**. (Backing up the
-original install during step 3 above is the most complete way to preserve it.)
+**[the White Walls reset appendix](appendix-whitewalls-reset.md)**. The most complete way
+to preserve the original is to **[back up its drive](appendix-backup-original.md)** before
+you install OpenObject (optional, capture-only).

@@ -29,7 +29,7 @@ The mini PC is a **MeLE Quieter 3Q** (confirmed from the unit's label; the BIOS 
 | Model | MeLE Quieter 3Q (BIOS board name `XXL`) |
 | CPU | Intel Celeron **N5105** (Jasper Lake / "JasperLake ULX"), 2.00 GHz, **x86-64** — _bench-confirmed 2026-06-13; earlier "N5100" was wrong_ |
 | RAM | 8 GB LPDDR4x _(typical config; not yet confirmed at bench)_ |
-| Storage | **~256 GB eMMC** _(Android reported ~252 GB usable / ~93 GB free; UEFI device id `A3V012`; confirm exact size/path from Linux at install — earlier "128 GB" was wrong)_ |
+| Storage | **~128 GB eMMC** — confirmed from Linux as **116.5 GiB** at `/dev/mmcblk0` (2026-06-13): EFI `p1` 512 MB + ext4 `p2` 116 GB, plus 4 MB `mmcblk0boot0/1`. UEFI device id `A3V012`. _(The earlier "~256 GB" came from the Android storage screen and was wrong — `lsblk` is authoritative; the original "128 GB" was right.)_ |
 | Expansion | microSD slot (pressure valve for larger libraries) |
 | Networking | Onboard **Wi-Fi 5** + **Gigabit Ethernet** (RJ45) |
 | Power | 12 V / 2 A barrel jack |
@@ -86,7 +86,7 @@ This is the procedure to convert a stock XXL to OpenObject. It is performed once
 7. **Install OpenObject** (Linux + the OpenObject stack) to the eMMC.
 8. **Verify on the panel** before considering it done: display comes up, Wi-Fi onboarding works, control panel reachable.
 
-> **Recorded at bench (2026-06-13):** BIOS-entry key = **`Del`**; there is **no** "auto power on" setting (auto-on is the firmware default — see step 4); eMMC ≈ **256 GB**, UEFI id `A3V012` (confirm the Linux device path, e.g. `/dev/mmcblk*`, when installing).
+> **Recorded at bench (2026-06-13):** BIOS-entry key = **`Del`**; there is **no** "auto power on" setting (auto-on is the firmware default — see step 4); eMMC = **~128 GB** (`/dev/mmcblk0`, **116.5 GiB** confirmed from Linux), UEFI id `A3V012`.
 
 ---
 
@@ -450,7 +450,7 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 
 - [x] **Hardware models** (2026-06-13) — UGreen 4-port USB 3.0 hub (**25946**); CableCreation **left-angle** USB 3.0 extension (**CC0516**); Logitech **K400 Plus**. Filled into §16 / Setup Guide.
 - [x] **Logo / OpenObject mark** — supplied by Matt; optimized marks in `assets/branding/` (source masters in `Logo/`, gitignored). Transparent / white-on-dark variants derived in Phase 1.
-- [~] **Bench-verified specs** (2026-06-13) — **BIOS-entry key `Del`** ✓; **Auto-Power-On = none / firmware auto-on** ✓ (no toggle exists); **eMMC ≈ 256 GB** (id `A3V012`) ✓; **CPU N5105** ✓; **UEFI + Secure-Boot-off** ✓. **Still TBD:** Wi-Fi module/driver under Linux (FCC TX ID `PD99560D2`), RAM, exact eMMC free space + Linux path.
+- [~] **Bench-verified specs** — **BIOS-entry key `Del`** ✓; **Auto-Power-On = none / firmware auto-on** ✓ (no toggle exists); **CPU N5105** ✓; **UEFI + Secure-Boot-off** ✓; **eMMC = ~128 GB** (116.5 GiB at `/dev/mmcblk0`; corrected 2026-06-13 from the wrong "~256 GB") ✓; **onboard Wi-Fi works under Ubuntu 26.04 live** ✓ (2026-06-13 smoke test). **Still TBD:** exact Wi-Fi module/driver name (FCC TX ID `PD99560D2` — capture `lspci -nnk` next session), RAM.
 - [x] **GitHub repo** — created **private** (2026-06-11); goes public later.
 - [x] **Content model confirmed** (2026-06-11) — library+select, not replace-on-upload.
 
@@ -459,6 +459,14 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-13 — Phase 2 bench: live boot, Wi-Fi confirmed, factory eMMC cloned
+Second hands-on bench session — booted our own Linux on the unit and made the pre-wipe backup.
+- **Live USB:** flashed **Ubuntu 26.04 LTS desktop** (current LTS — newest kernel/firmware) to a USB stick from the Mac (`dd`), booted the MeLE via **Save & Exit → Boot Override → `UEFI: <stick>`** (the factory `ubuntu (eMMC A3V012)` entry is the eMMC; `Del` → BIOS as expected), chose **Try Ubuntu** (live; no install).
+- **Wi-Fi smoke test PASSED:** the onboard Wi-Fi scanned, associated, and carried traffic under Ubuntu 26.04 — the single biggest Phase-2 unknown, now de-risked (Wi-Fi-only install is viable, §11). Exact chip/driver name still to capture (`lspci -nnk`).
+- **eMMC size corrected — ~128 GB, not 256 GB.** Linux `lsblk` shows **`/dev/mmcblk0` = 116.5 GiB** (EFI `p1` 512 MB + ext4 `p2` 116 GB factory Ubuntu root, + 4 MB `mmcblk0boot0/1`). The earlier "~256 GB" came from the Android storage screen and was wrong; `lsblk` is authoritative, so the original "128 GB" was right. **§2 / §4 / §19 corrected**, and the Linux path `/dev/mmcblk0` resolves a §19 TBD.
+- **Factory eMMC cloned (capture-only backup):** mounted a 2 TB exFAT USB drive in the live session and ran `ddrescue /dev/mmcblk0 → xxl-emmc.img` (read-only on the eMMC; ~117 GB image). Distilled into a new **optional** appendix, `docs/appendix-backup-original.md` (bold "already unusable / no supported way back / capture-only" disclaimer, per the install-doc strategy). SETUP-GUIDE parts list + the White Walls appendix updated in lockstep; the White Walls appendix's "Android-x86" line corrected to Waydroid-on-Ubuntu.
+- **Bench-process note:** SSH from the Mac to the live unit could not be established (Mac is multi-homed Ethernet + Wi-Fi, and Mac→unit stayed unreachable even Wi-Fi-only — a deeper Mac-side routing/policy issue; the unit could reach the Mac fine). Worked around by hand-typing commands at the frame and reading the screen via phone photos. SSH is a build-time convenience only and never appears in the next-owner flow. (Matt, 2026-06-13.)
 
 ### 2026-06-13 — Hardware bench identification (Phase 2 kickoff)
 First hands-on session with the actual XXL unit (original OS reachable). Identity **confirmed**; several prior assumptions **corrected**:

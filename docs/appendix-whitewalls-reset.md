@@ -4,13 +4,14 @@ This is preserved from the vendor's tutorial so a future owner can re-register t
 **original** Infinite Objects software *while the vendor's servers still exist*. It is
 **not part of OpenObject** — it's offered as a courtesy.
 
-> The most complete way to preserve the original is the **full pre-wipe disk image**
-> captured during installation (see the install steps in the Setup Guide / HANDOFF
-> §4, step 6). That image captures the entire original install, not just a
-> registration reset. The steps below only reset the app's account registration.
+> The most complete way to preserve the original is a **full pre-wipe disk image** of the
+> built-in drive — see the **[backup appendix](appendix-backup-original.md)**. That image
+> captures the entire original install, not just a registration reset. The steps below only
+> reset the app's account registration.
 
-The original software is a standard Android app running on Android-x86. To manually
-reset its account registration:
+The original software is a standard Android app running in **Waydroid** (a LineageOS
+Android 11 container) on **Ubuntu Linux**. To manually reset its account registration (all
+inside the Android container's UI):
 
 1. Connect a USB-A **mouse** to the mini PC.
 2. Reveal the system menu: **click-and-drag downward from the very top** of the
