@@ -63,10 +63,19 @@ keeps working), no runtime art. Plug in any USB stick (or use the backup drive) 
 git bundle create /Volumes/<STICK>/openobject.bundle --all
 ```
 
+> **Seed-stick format:** it must be readable by *both* macOS and the frame's Linux, so format it
+> **MS-DOS (FAT)** or **exFAT** — not a Mac-only format (APFS / Mac OS Extended). Most sticks
+> already are FAT/exFAT out of the box; only reformat if yours is Mac-only. In **Disk Utility**:
+> *View → Show All Devices*, select the **stick** (check the size so it isn't your Mac or the
+> backup drive!), **Erase** → Format **MS-DOS (FAT)** (or **ExFAT** for a stick over 32 GB),
+> Scheme **Master Boot Record**.
+
 ### 2. Install minimal Debian on the eMMC
 
-1. On the Mac, flash the **Debian stable netinst** ISO to a USB stick (same `dd` flow as the
-   Ubuntu live stick — verify the target disk first).
+1. On the Mac, flash the **Debian stable netinst** ISO to a USB stick. **No need to format this
+   stick first** — the flasher overwrites it whole. Use **balenaEtcher** (pick the ISO, pick the
+   stick, Flash — it hides your system disk so you can't mis-target it) or, for builders, `dd`
+   (verify the target disk first).
 2. Boot the MeLE: tap **`Del`** for BIOS or use **Boot Override → `UEFI: <stick>`**.
 3. Run the installer. **Wipe `/dev/mmcblk0`** (guided, entire disk). Choose a **minimal**
    system — at *Software selection* untick everything **except "standard system utilities"**
