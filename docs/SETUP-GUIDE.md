@@ -5,11 +5,13 @@ No engineering knowledge needed. If you've never seen the build spec, you're in 
 right place.
 
 > **Heads-up — this guide is still being written.** The everyday "add and arrange
-> art" part (further down) is real and current. The **install** part still needs the
-> bootable USB installer (in progress). The hardware itself is now confirmed at the
-> bench — the BIOS key (**`Del`**) and the exact parts are filled in below — but the
-> install steps will get final screenshots and a tested USB image before anyone
-> follows them. Nothing here is final until this note is gone.
+> art" part (further down) is real and current. The **install** part now has a working
+> installer (built 2026-06-14) and is being tested on the real frame at the bench. The
+> hardware is confirmed — the BIOS key (**`Del`**) and the exact parts are filled in
+> below. The goal is a **single download you flash once**; until that one-file image is
+> ready, installing means a couple of extra steps (builders: see `installer/README.md`).
+> The steps below will get final screenshots and a tested image before anyone relies on
+> them. Nothing here is final until this note is gone.
 
 ---
 

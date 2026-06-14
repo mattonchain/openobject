@@ -612,7 +612,8 @@ async function loadSystem() {
   const s = await fetch('/api/system').then((r) => r.json()).catch(() => null);
   if (!s) return;
   const items = (s.addresses || []).map((ip) => {
-    const url = `http://${ip}:${s.port}`;
+    // Omit the port for plain http (:80) so the frame shows a clean http://<ip> (HANDOFF §11).
+    const url = `http://${ip}${s.port && Number(s.port) !== 80 ? ':' + s.port : ''}`;
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`;
   });
   if (s.mdns) items.push(`<span class="reach-mdns">${escapeHtml(s.mdns)} — on the installed frame</span>`);

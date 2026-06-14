@@ -1,0 +1,40 @@
+[Unit]
+# OpenObject kiosk — Chromium rendering /display, fullscreen, no desktop chrome (HANDOFF §6).
+# Uses `cage`, a Wayland kiosk compositor: one app, fullscreen, cursor hidden, no blanking.
+# The launcher waits for the player's /healthz before opening the browser, so the panel never
+# flashes a connection-refused page on boot.
+Description=OpenObject kiosk (Chromium via cage)
+Documentation=https://github.com/mattonchain/openobject
+# Order after the player; the launcher also polls /healthz, so this is best-effort, not a hard
+# dependency (the player restarts on its own and the page self-heals).
+Wants=openobject-player.service
+After=openobject-player.service
+# Take over the console from the login prompt on tty1.
+After=systemd-user-sessions.service getty@tty1.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=openobject
+# A real login session via PAM, so logind grants this process a seat on seat0 — that is what
+# lets cage become DRM master and read the keyboard/touch input without X or a display manager.
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XDG_SESSION_CLASS=user
+Environment=XDG_SEAT=seat0
+Environment=XDG_VTNR=1
+ExecStart=/opt/openobject/installer/kiosk/start-kiosk.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

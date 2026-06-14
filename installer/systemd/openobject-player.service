@@ -1,0 +1,42 @@
+[Unit]
+# OpenObject player — the Node web server + display engine (HANDOFF §5, §15).
+# On the device, systemd IS the supervisor: it replaces player/supervisor.js. The player
+# still just exits with code 75 to ask for a relaunch (after a self-update or the Restart
+# button); systemd brings it right back up on the new code. That is the ONLY Phase-2 change
+# to the restart path — the player side is byte-identical to Phase 1.
+Description=OpenObject player (web server + display)
+Documentation=https://github.com/mattonchain/openobject
+After=network.target
+
+[Service]
+Type=simple
+User=openobject
+Group=openobject
+WorkingDirectory=/opt/openobject/player
+ExecStart=/usr/bin/node /opt/openobject/player/server.js
+
+# Tells the player an auto-relaunch is available, so self-update / Restart may exit-to-restart.
+Environment=OO_SUPERVISED=1
+# Listen on :80 so the control panel is plain http://openobject.local (no port), per the docs.
+Environment=PORT=80
+Environment=HOST=0.0.0.0
+# Runtime data lives OUTSIDE the code checkout (HANDOFF §8, §15), so a self-update or a
+# re-seed of /opt/openobject can never touch the library, settings, or uploaded art.
+Environment=OO_DATA_DIR=/var/lib/openobject/data
+Environment=OO_UPLOADS_DIR=/var/lib/openobject/uploads
+# The repo is private today: make `git fetch` during self-update fail FAST instead of hanging
+# on a credential prompt. Self-update goes fully live the day the repo is public.
+Environment=GIT_TERMINAL_PROMPT=0
+Environment=NODE_ENV=production
+
+# Bind the privileged port 80 while still running as the unprivileged `openobject` user.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# systemd is the supervisor: always bring the player back. 75 is the player's "restart me"
+# code (HANDOFF §15) — treat it as a clean exit so it doesn't log as a failure.
+Restart=always
+RestartSec=1
+SuccessExitStatus=75
+
+[Install]
+WantedBy=multi-user.target

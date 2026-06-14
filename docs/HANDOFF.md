@@ -49,7 +49,7 @@ The mini PC is a **MeLE Quieter 3Q** (confirmed from the unit's label; the BIOS 
 
 ## 3. Operating system
 
-**Lightweight Linux** (Debian-based minimal recommended; final choice at build time). Selection criteria:
+**Minimal Debian (stable), UEFI** — locked 2026-06-14 (see the build note at the end of this section). Selection criteria that drove it:
 
 - Recent-enough kernel that the **onboard Wi-Fi works out of the box** (verify the module via FCC ID / `lspci`/`lsusb` at bench; keep a known-good USB Wi-Fi dongle as the only fallback — it would ride in the hub).
 - Can run **Chromium in kiosk mode** as the display surface (see §6).
@@ -60,6 +60,20 @@ The mini PC is a **MeLE Quieter 3Q** (confirmed from the unit's label; the BIOS 
 The OS image should boot directly into the OpenObject display with no desktop, login, or visible Linux chrome.
 
 > **Bench note (2026-06-13):** the factory unit already runs **Ubuntu** on this exact hardware (N5105 iGPU, the square HDMI panel, onboard Wi-Fi, the USB hub), so a Debian-based install is low-risk — graphics, panel, and networking are all known-good under mainstream Linux. The factory stack is heavier than ours (Ubuntu → Waydroid container → Android → White Walls) and boots slowly (~1 min to art); our native Node + Chromium-kiosk path should boot markedly faster.
+
+**Built 2026-06-14 (Phase 2B) — installer stack locked + built (Mac side):**
+- **Base:** minimal **Debian stable** (UEFI; no desktop), installed by the standard Debian
+  netinst, which also wipes the eMMC and joins Wi-Fi. Our `installer/install.sh` provisions
+  OpenObject on top — idempotent, re-runnable.
+- **Display surface:** **`cage`** (a Wayland *kiosk compositor*: one fullscreen app, cursor
+  hidden, no blanking) running **Chromium `--kiosk`** at `http://localhost/display`. No X, no
+  window manager, no display manager. (X11 + Openbox is the documented fallback if cage
+  misbehaves on the N5105 iGPU — see `installer/README.md`.)
+- **Services:** **systemd** runs the player and the kiosk (replacing `player/supervisor.js`,
+  §15). **Avahi** advertises `openobject.local`; **NetworkManager** owns Wi-Fi (the foundation
+  for the §11 setup-AP). Intel iGPU + VA-API drivers and `libavcodec-extra` are installed for
+  hardware decode (WebM is always safe; the codec package widens MP4/H.264 support).
+- The build tooling lives in `installer/` (`install.sh`, `systemd/`, `kiosk/`, `README.md`).
 
 ---
 
@@ -83,8 +97,15 @@ This is the procedure to convert a stock XXL to OpenObject. It is performed once
 4. **Auto power-on — nothing to set.** _(Confirmed 2026-06-13:)_ this BIOS exposes **no** "Auto Power On / Restore AC Power Loss / State After G3" toggle (checked `Chipset → PCH-IO Configuration`), and the unit already boots on its own when power is applied — auto-on is the firmware default. So it boots whenever it receives power, no button press, nothing to enable (see §10). _(If a future unit doesn't auto-boot, the only place an ODM might hide it is `Advanced → Customer Exclusive Functions`.)_
 5. **Boot the live USB.**
 6. **BACK UP FIRST — image the existing eMMC** to the external drive (full-disk image). This preserves the original **Ubuntu + Waydroid (White Walls)** install in case the owner ever wants it back *while the vendor's servers still exist*. This is the clean, ADB-free way to capture it. **Do this before any wipe.**
-7. **Install OpenObject** (Linux + the OpenObject stack) to the eMMC.
-8. **Verify on the panel** before considering it done: display comes up, Wi-Fi onboarding works, control panel reachable.
+7. **Install OpenObject** to the eMMC. Two stages (full runbook: `installer/README.md`):
+   **(a)** run the standard **Debian stable netinst** — wipe `/dev/mmcblk0`, choose a *minimal*
+   system (untick the desktop; keep "standard system utilities"), set hostname `openobject`,
+   join Wi-Fi. **(b)** seed the OpenObject checkout to `/opt/openobject` (from a `git bundle` on
+   a USB stick) and run **`sudo bash /opt/openobject/installer/install.sh`** — it installs Node
+   22, Chromium + cage, Avahi, NetworkManager, the systemd units, and reboots into the kiosk.
+8. **Verify on the panel** before considering it done: the display comes up edge-to-edge at
+   `/display`, `http://openobject.local` is reachable over Wi-Fi, an uploaded clip plays,
+   **Restart** bounces the player, and an unplug/replug auto-boots back to the display.
 
 > **Recorded at bench (2026-06-13):** BIOS-entry key = **`Del`**; there is **no** "auto power on" setting (auto-on is the firmware default — see step 4); eMMC = **~128 GB** (`/dev/mmcblk0`, **116.5 GiB** confirmed from Linux), UEFI id `A3V012`.
 
@@ -358,6 +379,20 @@ fast-forward + restart (commit flips on `/healthz`) → divergence refusal, plus
 not-a-git-checkout paths. Phase 2 swaps the supervisor for a systemd unit; the mechanism is
 unchanged.
 
+**Built 2026-06-14 (Phase 2 — device).** On the frame, **systemd is the supervisor**:
+`openobject-player.service` runs `node server.js` directly with `OO_SUPERVISED=1` and
+`Restart=always`, and treats the player's exit-75 (self-update + Restart) as a clean relaunch
+(`SuccessExitStatus=75`). **No player code changed** — only what relaunches it. The checkout
+lives at **`/opt/openobject`** (a real git checkout, `origin` → the GitHub repo) and runtime
+data at **`/var/lib/openobject/{data,uploads}`** via `OO_DATA_DIR`/`OO_UPLOADS_DIR`, so a pull
+or a re-seed can never touch the library. The player listens on **port 80**
+(`CAP_NET_BIND_SERVICE`, still non-root) so the panel is plain `http://openobject.local`.
+**Self-update is wired but only goes live when the repo is public** — while private, a
+`git fetch` can't authenticate (we set `GIT_TERMINAL_PROMPT=0` so *Check for updates* fails fast
+and reports gracefully rather than hanging); making the repo public is the one-step follow-up.
+The bench unit is **seeded from a `git bundle`** of the local repo (private repo → no clone
+auth needed; full history preserved so self-update works once public).
+
 ---
 
 ## 16. Documentation requirement (two audiences, kept in lockstep)
@@ -450,7 +485,7 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 
 - [x] **Hardware models** (2026-06-13) — UGreen 4-port USB 3.0 hub (**25946**); CableCreation **left-angle** USB 3.0 extension (**CC0516**); Logitech **K400 Plus**. Filled into §16 / Setup Guide.
 - [x] **Logo / OpenObject mark** — supplied by Matt; optimized marks in `assets/branding/` (source masters in `Logo/`, gitignored). Transparent / white-on-dark variants derived in Phase 1.
-- [~] **Bench-verified specs** — **BIOS-entry key `Del`** ✓; **Auto-Power-On = none / firmware auto-on** ✓ (no toggle exists); **CPU N5105** ✓; **UEFI + Secure-Boot-off** ✓; **eMMC = ~128 GB** (116.5 GiB at `/dev/mmcblk0`; corrected 2026-06-13 from the wrong "~256 GB") ✓; **onboard Wi-Fi works under Ubuntu 26.04 live** ✓ (2026-06-13 smoke test). **Still TBD:** exact Wi-Fi module/driver name (FCC TX ID `PD99560D2` — capture `lspci -nnk` next session), RAM.
+- [~] **Bench-verified specs** — **BIOS-entry key `Del`** ✓; **Auto-Power-On = none / firmware auto-on** ✓ (no toggle exists); **CPU N5105** ✓; **UEFI + Secure-Boot-off** ✓; **eMMC = ~128 GB** (116.5 GiB at `/dev/mmcblk0`; corrected 2026-06-13 from the wrong "~256 GB") ✓; **onboard Wi-Fi works under Ubuntu 26.04 live** ✓ (2026-06-13 smoke test). **Still TBD (placeholder — to fill from the bench):** exact Wi-Fi module/driver name (FCC TX ID `PD99560D2`) — captured via `lspci -nnk` as **step 0** of the installer runbook (`installer/README.md`), before any wipe, to confirm Debian's in-box firmware covers it (USB Wi-Fi dongle is the §3 fallback); RAM.
 - [x] **GitHub repo** — created **private** (2026-06-11); goes public later.
 - [x] **Content model confirmed** (2026-06-11) — library+select, not replace-on-upload.
 
@@ -459,6 +494,31 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-14 — Phase 2B: UEFI Debian + Chromium-kiosk installer built (Mac side)
+Built the installer that turns a minimal Debian into an OpenObject appliance; bench test pending.
+- **OS + kiosk locked (§3):** minimal **Debian stable** (UEFI, no desktop) via the standard
+  netinst, then an idempotent **`installer/install.sh`** provisions on top. Display surface =
+  **`cage`** (Wayland kiosk compositor) running **Chromium `--kiosk`** at `localhost/display` —
+  no X / WM / DM. X11 + Openbox documented as the fallback.
+- **systemd replaces `supervisor.js` (§15)** with **no player code change** — the player already
+  honored `OO_SUPERVISED` + exit-75 and `PORT`/`OO_DATA_DIR`/`OO_UPLOADS_DIR`, so Phase 2 is pure
+  *configuration*. `openobject-player.service` (`Restart=always`, `SuccessExitStatus=75`,
+  `CAP_NET_BIND_SERVICE` → **port 80**) + `openobject-kiosk.service` (cage on tty1 via the
+  logind-seat `PAMName=login` pattern).
+- **Layout:** code at `/opt/openobject` (git checkout, `origin` → GitHub), runtime data at
+  `/var/lib/openobject/` (outside the checkout, so self-update/re-seed can't touch the library).
+- **Private-repo seeding:** the bench unit is seeded from a **`git bundle`** of the local repo
+  (no clone-auth needed, history preserved). **Self-update is wired but goes live only when the
+  repo is public** (`GIT_TERMINAL_PROMPT=0` makes the private-repo fetch fail fast/graceful).
+- **NetworkManager** becomes the network manager (foundation for the §11 setup-AP); the handoff
+  from the netinst's Wi-Fi runs **last** and is **non-fatal** (proves itself before retiring the
+  old config, else leaves the working Wi-Fi alone).
+- **Mac-side verification (no hardware):** `bash -n` on all scripts ✓; a **`git bundle`
+  round-trip** ✓ — clones to a clean committed-only checkout (no `node_modules`/`data`/`uploads`,
+  §8) and `npm install` resolves. Files: `installer/install.sh`, `installer/systemd/*.service`,
+  `installer/kiosk/{start-kiosk,chromium-kiosk}.sh`, `installer/README.md`. **Out of scope this
+  session:** the §11 setup-AP/captive portal and the §15 one-file release image. (Matt, 2026-06-14.)
 
 ### 2026-06-13 — Phase 2 bench: live boot, Wi-Fi confirmed, factory eMMC cloned
 Second hands-on bench session — booted our own Linux on the unit and made the pre-wipe backup.
