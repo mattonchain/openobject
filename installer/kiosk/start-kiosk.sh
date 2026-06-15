@@ -32,4 +32,6 @@ export XCURSOR_THEME=blank
 export XCURSOR_SIZE=24
 
 # cage runs a single client fullscreen and exits when it exits (systemd then relaunches us).
-exec cage -- "$HERE/chromium-kiosk.sh"
+# -s allows VT switching, so Ctrl+Alt+F2 reaches a Debian console for servicing. Without it cage
+# locks the VT and there is no way off the kiosk with a keyboard. Physical access only, fine here.
+exec cage -s -- "$HERE/chromium-kiosk.sh"
