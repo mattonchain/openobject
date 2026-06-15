@@ -129,9 +129,11 @@ else
   warn "$TARGET is not a git checkout — self-update will be unavailable until it is."
 fi
 
-log "Installing player dependencies (npm)"
-( cd "$TARGET/player" && run_as_oo npm install --omit=dev --no-audit --no-fund ) \
-  || die "npm install failed (network?)"
+log "Installing player dependencies (npm ci)"
+# npm ci installs exactly what package-lock.json pins and never rewrites it, so the checkout stays
+# clean. (npm install can rewrite the lockfile, which then trips the self-update dirty-tree guard.)
+( cd "$TARGET/player" && run_as_oo npm ci --omit=dev --no-audit --no-fund ) \
+  || die "npm ci failed (network, or package-lock.json out of sync?)"
 ok "dependencies installed"
 
 # ── 5. systemd units ────────────────────────────────────────────────────────────────

@@ -271,14 +271,16 @@ async function apply() {
   }
   const afterHead = (await git('rev-parse', 'HEAD')).stdout;
 
-  // Reinstall dependencies only when the manifest actually changed across the update.
+  // Reinstall dependencies only when the manifest actually changed across the update. Use `npm ci`,
+  // not `npm install`: it installs exactly what the lockfile pins and never rewrites it, so the
+  // checkout stays clean and a later fast-forward is never blocked by a self-inflicted lockfile edit.
   const depsChanged = await manifestsChanged(beforeHead, afterHead);
   let installed = false;
   let installError = null;
   if (depsChanged) {
-    const r = await run('npm', ['install', '--no-audit', '--no-fund'], { cwd: PLAYER_DIR, timeout: NPM_TIMEOUT_MS });
+    const r = await run('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], { cwd: PLAYER_DIR, timeout: NPM_TIMEOUT_MS });
     if (r.code === 0) installed = true;
-    else installError = r.stderr || 'npm install failed';
+    else installError = r.stderr || 'npm ci failed';
   }
 
   return {
