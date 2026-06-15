@@ -1,4 +1,4 @@
-# CLAUDE.md — OpenObject working rules
+# CLAUDE.md: OpenObject working rules
 
 Orientation for any Claude (or human) working in this repo. The authoritative
 spec is **`docs/HANDOFF.md`** (engineering), mirrored for non-technical owners by
@@ -9,7 +9,7 @@ OpenObject is self-hosted replacement software for the **Infinite Objects XXL**
 26" square (1:1) digital art frame. It wipes the frame's **MeLE Quieter 3Q** mini
 PC and turns it into a clean local art player: shows local images/videos,
 controlled from a web page, depends on no external service. Mission: **revivable
-by the next stranded XXL owner** — favor "anyone can follow the guide" over
+by the next stranded XXL owner**, favor "anyone can follow the guide" over
 builder-only convenience.
 
 ## Hard constraints (this build)
@@ -20,9 +20,9 @@ builder-only convenience.
   **`docs/SETUP-GUIDE.md`** in the *same change* as `docs/HANDOFF.md`. The Setup
   Guide must always reflect shipped behavior (HANDOFF §16).
 - **§19 placeholders are sacred.** Do **not** invent hardware model numbers, bench
-  specs, eMMC sizes, BIOS-entry keys, or Auto-Power-On labels — they come from
+  specs, eMMC sizes, BIOS-entry keys, or Auto-Power-On labels, they come from
   Matt at the bench. Mark unknowns clearly as placeholders. (The logo is now
-  supplied — see Branding.)
+  supplied, see Branding.)
 - **Art never touches the repo.** Uploaded images/videos and the local library are
   gitignored runtime data, never committed (HANDOFF §8, §15).
 - **Repo is PRIVATE for now**, intended to go public later when it makes sense. The
@@ -47,12 +47,12 @@ builder-only convenience.
   (`100vw × 100vh`, no margin/padding/border/scrollbars/UI). Media renders to the
   physical edges. **No decorative frame or border, ever.**
 - **Render mode: default Fit** (original aspect ratio, `object-fit: contain`);
-  **per-clip Fill override** (`object-fit: cover; object-position: center` —
-  symmetric center-crop). Fit letterboxes against black — that bare stage is *not* a
+  **per-clip Fill override** (`object-fit: cover; object-position: center`,
+  symmetric center-crop). Fit letterboxes against black, that bare stage is *not* a
   frame. v1 is center-crop only.
 - **Rotation order: Sequence / Shuffle.** Sequence = the set order; Shuffle =
   randomized pass, each clip once before repeating, then reshuffles. (Pure independent
-  Random was dropped — odd fit for a frame; Shuffle already covers random order.)
+  Random was dropped, odd fit for a frame; Shuffle already covers random order.)
 - **Motion + audio: GIF/WebP/AVIF and video loop-to-fill; never freeze on frame 1.
   Muted, always.** **One global equal-time duration** for every piece (no per-clip
   duration); a clip longer than it is cut at the duration, shorter loops to fill.
@@ -60,12 +60,12 @@ builder-only convenience.
   the first clip, fold the rest in without restarting/stuttering the loop. A
   buffered/least-recently-shown eviction mode is a documented seam, off by default.
 - **Source layer is a clean interface.** v1 ships **web upload** only. SMB pull and
-  the on-chain/NFT resolver are seams — **not built** in v1.
+  the on-chain/NFT resolver are seams, **not built** in v1.
 - **Sleep Hours** (optional overnight blank/dim) is a v1 feature.
 
 ## Formats (v1)
 Supported: **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**. PNG transparency renders
-against black. **Skip** (do not convert, do not error) everything else — HEIC, SVG,
+against black. **Skip** (do not convert, do not error) everything else, HEIC, SVG,
 PSD, raw, GLB, and OS noise (`.DS_Store`, office files, etc.). Uploads stay
 byte-for-byte.
 
@@ -73,20 +73,20 @@ byte-for-byte.
 The **OPEN / OBJECT** wordmark lives in `assets/branding/` (optimized opaque PNGs;
 large source masters stay in `Logo/`, gitignored). **Phase 1:** vectorize the high-res
 master (`Logo/logo-2k.png`, falling back to `logo_orig.png` if the 2k turns out a soft
-upscale rather than added detail) with **Potrace → `openobject-logo.svg`** — single-color and
+upscale rather than added detail) with **Potrace → `openobject-logo.svg`**, single-color and
 transparent, so CSS recolors it white-on-dark (idle/boot screen) or black-on-light;
 derive transparent PNG exports from it as needed. A plain raster color-inverse is
 *not* the plan (Matt handles that in Photoshop if ever needed). **SVG here is a
-UI/brand asset only** — displayed user *art* in SVG stays deferred per §6. Aesthetic:
+UI/brand asset only**, displayed user *art* in SVG stays deferred per §6. Aesthetic:
 understated, functional, no clutter.
 
 ## Phases
-- **Phase 0** — repo, structure, docs, CLAUDE.md, GitHub. *(done)*
-- **Phase 1** *(current)* — the Mac-testable web app: server, library/upload, control
+- **Phase 0**, repo, structure, docs, CLAUDE.md, GitHub. *(done)*
+- **Phase 1** *(current)*, the Mac-testable web app: server, library/upload, control
   panel, display page + behaviors, progressive sync, sleep hours, **self-update from
   GitHub**. All visible in a browser on macOS. Hardware-only features
   (Restart/Shutdown, Wi-Fi onboarding) ship as visible-but-inert stubs.
-- **Phase 2** *(when hardware arrives)* — lightweight Debian-based Linux, Chromium
+- **Phase 2** *(when hardware arrives)*, lightweight Debian-based Linux, Chromium
   kiosk, Wi-Fi onboarding AP + captive page, mDNS, BIOS Auto-Power-On, real
   restart/shutdown, optional SMB pull, bootable USB installer, prebuilt image as a
   GitHub Release asset. Fill every §19 placeholder from the bench.
@@ -95,10 +95,10 @@ understated, functional, no clutter.
 ```
 cd player && npm install && npm start
 ```
-Then open **http://localhost:3000/** — the control panel (web upload + Library so far).
+Then open **http://localhost:3000/**, the control panel (web upload + Library so far).
 The kiosk display is at **/display** (black, edge-to-edge stage; the branded idle screen
 until art is in the rotation). Separate routes so Chromium kiosk can point straight at
 the display later.
 
-Uses Node's built-in **`node:sqlite`** (Node ≥ 22.5) — no native module, no build step.
+Uses Node's built-in **`node:sqlite`** (Node ≥ 22.5), no native module, no build step.
 Runtime data (the library DB under `player/data/`, uploads) is gitignored (HANDOFF §8).

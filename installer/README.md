@@ -1,17 +1,17 @@
-# installer/ — turn a MeLE into an OpenObject frame
+# installer/: turn a MeLE into an OpenObject frame
 
 This provisions a **minimal Debian** install into an OpenObject appliance: it boots with no
 desktop straight into **Chromium (kiosk) on `/display`**, reachable at
-**`http://openobject.local`**. On the device, **systemd** runs the player and the kiosk —
+**`http://openobject.local`**. On the device, **systemd** runs the player and the kiosk,
 replacing the Phase-1 `player/supervisor.js` (HANDOFF §15).
 
-**Status:** Phase 2 — first working installer. Installs via the standard Debian installer +
+**Status:** Phase 2, first working installer. Installs via the standard Debian installer +
 this script. The one-file flashable **release image** (HANDOFF §15) and the no-keyboard
 **setup-AP / captive portal** (HANDOFF §11) are later milestones.
 
 ```
 installer/
-├─ install.sh                     # idempotent provisioner — run once on minimal Debian
+├─ install.sh                     # idempotent provisioner, run once on minimal Debian
 ├─ systemd/
 │  ├─ openobject-player.service   # Node player on :80 (systemd = the supervisor)
 │  └─ openobject-kiosk.service    # cage + Chromium kiosk on tty1
@@ -22,15 +22,15 @@ installer/
 
 ## How it works
 
-- **`cage`** (a tiny Wayland *kiosk compositor*) runs one fullscreen app and nothing else — no
+- **`cage`** (a tiny Wayland *kiosk compositor*) runs one fullscreen app and nothing else, no
   desktop, no window manager, cursor hidden, no screen blanking. It launches **Chromium** in
   `--kiosk` pointed at the local `/display` page.
 - **systemd** is the device's supervisor. `openobject-player.service` runs `node server.js`
   with `OO_SUPERVISED=1` and `Restart=always`; the player still just **exits with code 75** to
-  request a relaunch after a self-update or the **Restart** button, exactly as in Phase 1 — so
+  request a relaunch after a self-update or the **Restart** button, exactly as in Phase 1, so
   the restart/self-update mechanism is unchanged, only the thing that relaunches it differs.
 - **Runtime data** (library, uploads, browser profile) lives under **`/var/lib/openobject/`**,
-  outside the code checkout at **`/opt/openobject`** — so self-update and re-seeding never risk
+  outside the code checkout at **`/opt/openobject`**, so self-update and re-seeding never risk
   the art (HANDOFF §8, §15).
 - **Port 80** via a single Linux capability (`CAP_NET_BIND_SERVICE`), so the panel is plain
   `http://openobject.local` with no port. **Avahi** advertises that name.
@@ -39,7 +39,7 @@ installer/
 
 ## Bench procedure
 
-> Working model: drive the frame by hand at its keyboard (no SSH). Network is **Wi-Fi-only** —
+> Working model: drive the frame by hand at its keyboard (no SSH). Network is **Wi-Fi-only**,
 > you'll type the Wi-Fi name + password once during the Debian install.
 
 ### 0. Capture hardware facts first (before wiping anything)
@@ -51,12 +51,12 @@ lspci -nnk | sed -n '/Network controller/,/^$/p'   # the Wi-Fi chip + its kernel
 lspci -nnk | grep -iA3 vga                          # the iGPU + driver
 ```
 
-If a phone photo of those is easier, that's fine — we just need the Wi-Fi `[vvvv:dddd]` id, its
+If a phone photo of those is easier, that's fine, we just need the Wi-Fi `[vvvv:dddd]` id, its
 `Kernel driver in use:` line, and the `Subsystem:` name.
 
 ### 1. Make the seed (on the Mac, in this repo)
 
-The frame's checkout is seeded from a **git bundle** — one file, history intact (so self-update
+The frame's checkout is seeded from a **git bundle**, one file, history intact (so self-update
 keeps working), no runtime art. Plug in any USB stick (or use the backup drive) and run:
 
 ```
@@ -64,7 +64,7 @@ git bundle create /Volumes/<STICK>/openobject.bundle --all
 ```
 
 > **Seed-stick format:** it must be readable by *both* macOS and the frame's Linux, so format it
-> **MS-DOS (FAT)** or **exFAT** — not a Mac-only format (APFS / Mac OS Extended). Most sticks
+> **MS-DOS (FAT)** or **exFAT**, not a Mac-only format (APFS / Mac OS Extended). Most sticks
 > already are FAT/exFAT out of the box; only reformat if yours is Mac-only. In **Disk Utility**:
 > *View → Show All Devices*, select the **stick** (check the size so it isn't your Mac or the
 > backup drive!), **Erase** → Format **MS-DOS (FAT)** (or **ExFAT** for a stick over 32 GB),
@@ -73,12 +73,12 @@ git bundle create /Volumes/<STICK>/openobject.bundle --all
 ### 2. Install minimal Debian on the eMMC
 
 1. On the Mac, flash the **Debian stable netinst** ISO to a USB stick. **No need to format this
-   stick first** — the flasher overwrites it whole. Use **balenaEtcher** (pick the ISO, pick the
-   stick, Flash — it hides your system disk so you can't mis-target it) or, for builders, `dd`
+   stick first**, the flasher overwrites it whole. Use **balenaEtcher** (pick the ISO, pick the
+   stick, Flash, it hides your system disk so you can't mis-target it) or, for builders, `dd`
    (verify the target disk first).
 2. Boot the MeLE: tap **`Del`** for BIOS or use **Boot Override → `UEFI: <stick>`**.
 3. Run the installer. **Wipe `/dev/mmcblk0`** (guided, entire disk). Choose a **minimal**
-   system — at *Software selection* untick everything **except "standard system utilities"**
+   system, at *Software selection* untick everything **except "standard system utilities"**
    (no desktop). Set the **hostname to `openobject`**, and **join your Wi-Fi** when asked.
 4. Reboot into the new Debian and log in at the console.
 
@@ -94,12 +94,12 @@ sudo bash /opt/openobject/installer/install.sh
 sudo reboot
 ```
 
-`install.sh` is **idempotent** — if a step fails (e.g. network hiccup), fix it and run it again.
+`install.sh` is **idempotent**, if a step fails (e.g. network hiccup), fix it and run it again.
 
 ### 4. Verify on the panel
 
 - The panel shows the **OpenObject screen** edge-to-edge (the branded idle screen until art is
-  added) — no desktop, no cursor, no chrome.
+  added), no desktop, no cursor, no chrome.
 - From a phone on the **same Wi-Fi**, open **`http://openobject.local`** → the control panel.
 - **Upload** an image/clip → it appears in the Library and starts playing in the rotation.
 - **Settings → Restart** → the panel blinks and comes back (systemd relaunched the player).
@@ -124,7 +124,7 @@ Chromium one-off flags (no file edit needed) via the kiosk service environment, 
 ## Notes & fallbacks
 
 - **Self-update** is wired (origin points at GitHub) but only goes live once the repo is
-  **public** — while it's private a `git fetch` can't authenticate, so *Check for updates*
+  **public**, while it's private a `git fetch` can't authenticate, so *Check for updates*
   reports gracefully (we set `GIT_TERMINAL_PROMPT=0` so it fails fast rather than hanging). The
   **Restart** mechanism it relies on works now.
 - **Wi-Fi firmware:** Debian 12.4+ netinst bundles non-free firmware, so the onboard Wi-Fi
