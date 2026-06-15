@@ -9,7 +9,7 @@
 
 ## 1. What OpenObject is
 
-OpenObject is replacement software for the **Infinite Objects XXL** digital art frame, a 26" **square (1:1)** display whose original "White Walls" software (an Android kiosk app that rendered on-chain NFT art) has become unreliable as the vendor went quiet and its backend decayed.
+OpenObject is replacement software for the **Infinite Objects XXL** digital art frame, a 26" **square (1:1)** display. The frame originally ran the "White Walls" software (an Android kiosk app that rendered on-chain NFT art). That original setup is no longer reliable: the backend services it relied on have wound down.
 
 The XXL's display is driven by a small **fanless mini PC mounted on the back of the panel**. OpenObject wipes that mini PC and turns it into a clean, self-hosted local art frame: it displays local image and video files, is controlled entirely from a web page the owner opens in any browser, and depends on no external service.
 

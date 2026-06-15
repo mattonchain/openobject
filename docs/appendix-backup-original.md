@@ -1,8 +1,8 @@
 # Appendix: Back up the original software (optional)
 
-> **Optional, and capture-only.** Your frame's original **"White Walls"** software is
-> already unreliable, Infinite Objects has gone quiet and its servers are decaying, so
-> installing OpenObject **cannot make your frame any less usable than it already is**. This
+> **Optional.** Your frame's original setup is already unreliable: the
+> backend services it relied on have wound down, so installing OpenObject **cannot make your
+> frame any less usable than it already is**. This
 > appendix shows how to copy the original drive onto an external drive *before* you wipe it,
 > in case you ever want to tinker with it while the vendor's servers still exist.
 > **No restore instructions are provided anywhere**, putting the original back is not

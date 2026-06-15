@@ -7,7 +7,7 @@ engineering knowledge needed. If you've never seen the build spec, you're in the
 
 A frank word, friend to friend, before you start.
 
-I went in considering my XXL **useless**. The original software had rotted and the frame was a
+I went in considering my XXL **useless**. The backend services it relied on had wound down, and the frame was a
 paperweight, so I had nothing to lose. Whatever happened, it cost me nothing I hadn't already
 written off. **Bring that mindset.** If your frame still works and you'd grieve losing it, think
 hard first.
