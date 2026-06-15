@@ -67,6 +67,16 @@ systemctl disable --now ssh.socket  >/dev/null 2>&1 || true
 systemctl disable --now ssh.service >/dev/null 2>&1 || true
 ok "openssh-server installed but disabled (enable: sudo systemctl enable --now ssh)"
 
+# Console nicety: keep the text-console cursor on at each login. A stray control byte (e.g. from
+# dumping a binary file to the screen) can leave the Linux VT cursor hidden until something turns
+# it back on; this restores it on every console login. Harmless over SSH.
+cat > /etc/profile.d/oo-cursor.sh <<'PROFILE'
+# OpenObject: keep the Linux text-console cursor visible on login (harmless over SSH).
+setterm --cursor on 2>/dev/null || true
+PROFILE
+chmod 0644 /etc/profile.d/oo-cursor.sh
+ok "console cursor kept visible on login"
+
 # ── 2. Node 22 (NodeSource) ─────────────────────────────────────────────────────────
 log "Ensuring Node.js >= 22 (node:sqlite needs >= 22.5)"
 node_major() { node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
