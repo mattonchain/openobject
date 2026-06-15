@@ -4,79 +4,95 @@
 
 # OpenObject
 
-Self-hosted replacement software for the **Infinite Objects XXL** — the 26" square
-digital art frame whose original "White Walls" cloud software has decayed.
-OpenObject wipes the frame's built-in mini PC and turns it into a clean, **local**
-art player: it shows your own images and videos, is controlled from a web page in
-any browser, and **depends on no external service** to keep running.
+Self-hosted replacement software for the **Infinite Objects XXL**, a 26-inch square digital
+art frame whose original solution has decayed. OpenObject wipes the frame's built-in mini PC
+and turns it into a clean, local art player you fully control. It shows your own images and
+videos, runs from a web page in any browser, and needs no outside service to keep going.
 
-> **Status — working on real hardware.** The web app (control panel + display) and a
-> Debian-based installer are built and verified on an actual XXL: the frame boots with
-> no desktop straight into the art, reachable at `http://openobject.local`. The source
-> is available for **noncommercial use** — see [License](#license).
+> **Status: working on real hardware.** The web app (control panel and display) and a
+> Debian-based installer are built and verified on an actual XXL: the frame boots with no
+> desktop straight into the art, reachable at `http://openobject.local`. The source is
+> available for **noncommercial use** (see [License](#license)).
 
 ## Why
-The XXL is a normal x86 mini PC (a **MeLE Quieter 3Q**) behind a square panel — not
-a sealed appliance. When the vendor went quiet, perfectly good hardware was left
-showing error screens. OpenObject is a software reflash that brings it back, with
-two commitments:
 
-1. **Self-contained on the player.** The mini PC is the always-on brain. Your
-   Mac/phone are just where files come *from* and a browser to control it.
-2. **Revivable by the next owner.** This is meant as a shareable kit, so *anyone*
-   with a stranded XXL can follow along and bring their own unit back.
+The XXL is a normal x86 mini PC (a MeLE Quieter 3Q) behind a square panel, not a sealed
+appliance. The original solution decayed over time and left good hardware stuck. Full credit
+to the White Walls app that powered it, the real hero of the whole setup. OpenObject is a
+software reflash that brings the hardware back under your control, with two commitments:
+
+1. **Self-contained on the player.** The mini PC is the always-on brain. You upload artwork
+   and control the frame's settings from a browser on your phone or any other device, and the
+   frame keeps running on its own, with or without it.
+2. **Revivable by the next owner.** This is meant as a shareable kit, so anyone with a stranded
+   XXL can follow along and bring their own unit back.
 
 ## What it does (v1)
-- Displays **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**, edge-to-edge on the square
-  panel — no frame, no border.
-- **Library + Rotation + Pin:** everything you upload is kept; you choose what's in
-  the cycle and in what order (**Sequence / Shuffle**), and can pin one piece to hold
-  permanently.
-- **Per-clip control:** one global hold duration, and **Fit** (whole image — the
-  default) vs **Fill** (crop to fill the square).
-- **Animated art and video always loop** to fill their time — never freeze on the
-  first frame. Silent by design.
+
+- Displays **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**, edge to edge on the square panel,
+  with no frame and no border.
+- **Library, Rotation, and Pin.** Everything you upload is kept. You choose what plays and in
+  what order (**Sequence** or **Shuffle**), and you can pin one piece to hold it permanently.
+- **Per-clip control.** One global hold duration, plus **Fit** (the whole image, the default)
+  or **Fill** (crop to fill the square).
+- **Animated art and video always loop** to fill their time and never freeze on the first
+  frame. Silent by design.
 - **Sleep hours** to blank the panel overnight.
-- Add art by **dragging files onto the control panel** from any device — no
-  accounts, no cloud.
-- **Updates itself** from this repo (control panel → *Check for updates*), no reflash.
+- Add art by **dragging files onto the control panel** from any device. No accounts, no cloud.
+- **Updates itself** from this repo (control panel, then *Check for updates*). No reflash.
 
 ## Hardware target
-|              |                                                                    |
-| ------------ | ------------------------------------------------------------------ |
-| Frame        | Infinite Objects XXL (26", 1:1 square — 1920×1920)                  |
-| Player       | MeLE Quieter 3Q — Intel Celeron **N5105** (x86-64), Wi-Fi + Gigabit |
-| Video path   | Captive HDMI from the mini PC to the panel — untouched by reflash   |
+
+| | |
+| --- | --- |
+| Frame | Infinite Objects XXL (26-inch, 1:1 square, 1920x1920) |
+| Player | MeLE Quieter 3Q, Intel Celeron N5105 (x86-64), Wi-Fi plus Gigabit Ethernet |
+| Video path | Captive HDMI from the mini PC to the panel, untouched by the reflash |
 
 ## Get started
-- **Reviving a frame?** The **[Setup Guide](docs/SETUP-GUIDE.md)** walks the whole thing
-  in plain language. Builders: **[installer/](installer/README.md)** has the bench runbook
+
+- **Reviving a frame?** The **[Setup Guide](docs/SETUP-GUIDE.md)** walks the whole thing in
+  plain language. Builders can use **[installer/](installer/README.md)**, the bench runbook
   (wipe the eMMC, install minimal Debian, run `install.sh`, boot into the kiosk).
-- **Just want to try the app on your Mac?** `cd player && npm install && npm start`, then
-  open `http://localhost:3000/` (needs Node ≥ 22.5).
+- **Just want to try the app on your computer?** Run `cd player && npm install && npm start`,
+  then open `http://localhost:3000/` (needs Node 22.5 or newer).
 
 ## Repository layout
+
 ```
-docs/        engineering spec (HANDOFF) + casual SETUP-GUIDE + appendixes
-player/      the OpenObject web app (Node + SQLite, no build step)
-installer/   the Debian + Chromium-kiosk installer for the frame
+docs/        engineering spec (HANDOFF) plus the casual SETUP-GUIDE and appendixes
+player/      the OpenObject web app (Node and SQLite, no build step)
+installer/   the Debian and Chromium-kiosk installer for the frame
 assets/      branding (the OpenObject mark)
 ```
 
 ## Documentation
-- **[Setup Guide](docs/SETUP-GUIDE.md)** — for owners reviving a unit (no engineering).
-- **[Handoff / Build Spec](docs/HANDOFF.md)** — the full engineering spec + decision log.
-- **[Installer runbook](installer/README.md)** — how the frame is provisioned.
-- **[White Walls reset appendix](docs/appendix-whitewalls-reset.md)** — restoring the
-  *original* software, for owners who want it back.
+
+- **[Setup Guide](docs/SETUP-GUIDE.md)**: for owners reviving a unit (no engineering).
+- **[Handoff / Build Spec](docs/HANDOFF.md)**: the full engineering spec and decision log.
+- **[Installer runbook](installer/README.md)**: how the frame is provisioned.
+- **[White Walls reset appendix](docs/appendix-whitewalls-reset.md)**: restoring the original
+  software, for owners who want it back.
 
 ## License
-**Source available for noncommercial use** — [PolyForm Noncommercial License 1.0.0](LICENSE).
 
-In plain terms: you may use, modify, and share OpenObject to revive and run **your own**
-frame — personal and hobby use is welcome. You **may not** sell it, charge for it, or build
-it into a product, service, or other commercial/revenue venture. Because of that noncommercial
-limit it is deliberately **not** "open source" in the OSI sense — it is *source available*.
+**Source available for noncommercial use.** See the [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+In plain terms: you may use, modify, and share OpenObject to revive and run **your own** frame.
+Personal and hobby use is welcome. You **may not** sell it, charge for it, or build it into a
+product, service, or other commercial or revenue venture. Because of that noncommercial limit
+it is deliberately **not** "open source" in the OSI sense. It is *source available*.
+
+## No warranty
+
+OpenObject is provided **as is**, with **no warranty of any kind**. Installing it **wipes your
+device**, and there is no supported way back. It may not work on your unit, it may stop working
+after an update or over time, and in the worst case it could leave your frame unusable. You take
+that risk yourself.
+
+To the fullest extent permitted by law, the author is **not responsible** for what you do with
+OpenObject, for what it does or fails to do, or for any resulting damage, data loss, or other
+harm, and makes **no guarantee** that it works or will keep working.
 
 ## Independence and trademarks
 
