@@ -2,7 +2,7 @@
 
 > **Document type:** Implementation spec for Claude Code.
 > **Status:** Running on real hardware. The web app (Phase 1) plus the Debian and Chromium-kiosk installer (Phase 2B) are built and verified on an actual XXL frame, with over-the-air self-update working. What's left is later milestones (single-file release image, Wi-Fi onboarding AP, real restart/shutdown). See §20 for the decision log.
-> **Local project root:** `/Users/mattlhx/Code/OpenObject`
+> **Local project root:** `~/Code/OpenObject`
 > **GitHub repo:** `mattonchain/openobject`, **public** since 2026-06-14 (created private 2026-06-11). Claude drives all git operations on Matt's approval.
 > **Website:** https://openobject.io
 
@@ -309,13 +309,13 @@ Phase 1 blanks in **software**; dimming the actual **backlight** is a Phase 2 ha
 
 ## 14. Branding asset
 
-Matt is producing an **OpenObject mark** and will store it in the project (`/Users/mattlhx/Code/OpenObject`). Design the **fresh-boot screen** and **idle/empty screen** to consume a logo asset (with a tasteful text fallback if absent), so the mark drops in without layout changes. Aesthetic direction: understated, functional, no clutter.
+Matt is producing an **OpenObject mark** and will store it in the project (`~/Code/OpenObject`). Design the **fresh-boot screen** and **idle/empty screen** to consume a logo asset (with a tasteful text fallback if absent), so the mark drops in without layout changes. Aesthetic direction: understated, functional, no clutter.
 
 ---
 
 ## 15. Repository & distribution
 
-- **Local root:** `/Users/mattlhx/Code/OpenObject` (already created).
+- **Local root:** `~/Code/OpenObject` (already created).
 - **GitHub:** Claude Code initializes the repo, structure, and first commit. The repo is **private during development** (2026-06-11) and intended to go **public** later to serve the next-owner mission. Claude drives all git operations; Matt approves pushes at checkpoints (this replaced the original "walk Matt through it step-by-step" plan, see §20).
 - **Releases:** publish the **prebuilt USB installer image as a release asset** so a non-technical owner downloads one file instead of building anything. (Release assets hold large binaries; the repo proper does not.)
 - Suggested repo layout:
