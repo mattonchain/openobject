@@ -497,6 +497,12 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
 
+### 2026-06-15: openobject.io landing page live
+A public landing page now lives at **https://openobject.io** (and `www.` redirects to the apex), served by GitHub Pages with an enforced HTTPS certificate.
+- **Source:** a single self-contained `site/index.html` on `main` (dark wiki-style page, inline CSS, the logo recolored white, Open Graph and Twitter card tags, a "Find us on X" footer), with friendly copy drawn from the README and Setup Guide voice.
+- **Hosting:** an orphan `gh-pages` branch holding exactly `index.html` plus a `CNAME` file (`openobject.io`); the Pages source is that branch at its root. To update the live page later, edit `site/index.html` and re-publish to gh-pages keeping both files (dropping the CNAME would disconnect the domain).
+- **DNS (GoDaddy):** apex A and AAAA records pointing at the GitHub Pages addresses, a `www` CNAME to `mattonchain.github.io`, and a domain-verification TXT (verified at the account level for takeover protection).
+
 ### 2026-06-15: Kiosk cursor hidden, console access, opt-in SSH
 All delivered over the air (self-update + a power-cycle, no re-imaging), which exercised the Tier-1 update path end to end.
 - **Cursor solved.** cage takes its pointer from the cursor theme literally named `default` and ignores `XCURSOR_THEME`, so the earlier blank-theme attempt was a no-op even though cage had the variable. `start-kiosk.sh` now exposes the shipped transparent `blank` theme under the name `default` (a symlink rebuilt on each start, so it self-heals and fresh installs get it). Verified gone on the frame; the matching §17 enhancement item is removed.

@@ -9,6 +9,8 @@ art frame whose original solution has decayed. OpenObject wipes the frame's buil
 and turns it into a clean, local art player you fully control. It shows your own images and
 videos, runs from a web page in any browser, and needs no outside service to keep going.
 
+**Website:** [openobject.io](https://openobject.io)
+
 > **Status: working on real hardware.** The web app (control panel and display) and a
 > Debian-based installer are built and verified on an actual XXL: the frame boots with no
 > desktop straight into the art, reachable at `http://openobject.local`. The source is
@@ -64,6 +66,7 @@ docs/        engineering spec (HANDOFF) plus the casual SETUP-GUIDE and appendix
 player/      the OpenObject web app (Node and SQLite, no build step)
 installer/   the Debian and Chromium-kiosk installer for the frame
 assets/      branding (the OpenObject mark)
+site/        the openobject.io landing page (static HTML, served via GitHub Pages)
 ```
 
 ## Documentation
