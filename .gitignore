@@ -37,6 +37,7 @@ OpenObject-HANDOFF.pdf
 
 # Stray device/phone photo dumps — never commit personal photos
 Device Photos/
+Screenshots/
 
 # ── Installer build artifacts (Phase 2) ───────────────────────────
 /installer/build/
