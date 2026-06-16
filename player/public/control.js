@@ -269,7 +269,12 @@ async function send(files) {
   const form = new FormData();
   [...files].forEach((f) => form.append('files', f));
   setStatus(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}…`, true);
-  const res = await fetch('/api/upload', { method: 'POST', body: form }).then((r) => r.json());
+  const resp = await fetch('/api/upload', { method: 'POST', body: form });
+  const res = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    setStatus(res.error || `Upload failed (${resp.status}).`, true);
+    return;
+  }
   const added = res.added?.length || 0;
   const skipped = res.skipped || [];
   setStatus(

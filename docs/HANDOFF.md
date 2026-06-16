@@ -186,6 +186,7 @@ Design the source layer as a **clean interface**: *a source provides files to th
 **v1 sources:**
 
 - **Web upload (default).** Open the control panel in a browser → drag art onto the page, or tap to choose files → it lands in the library. Works identically from Mac, iPhone, iPad, Windows. **No mounting, no credentials.** This is the everyday path.
+  - **Upload guards (added 2026-06-16).** Each file is size-capped (default **512 MB**, env `OO_MAX_UPLOAD_MB`), with up to `OO_MAX_UPLOAD_FILES` (default 50) per request; an oversize file is refused with a clear message (HTTP 413) and no partial file is left on disk. Before accepting any upload the player checks free space and refuses when the disk would fall below a safety margin (env `OO_MIN_FREE_MB`, default **2048 MB**, HTTP 507), so no client on the LAN can fill the eMMC and wedge the frame.
 - **Pull from a network share (optional).** For power users who'd rather point at an existing folder on their machine. Player connects to an SMB share (Samba speaks both macOS and Windows file sharing) and syncs from it. Requires address + credentials in the control panel.
 
 **Not a source / explicitly out of scope:** Git/GitHub is **not** part of the content path in any form. GitHub is used solely for **source-code management and distribution** of OpenObject itself (§15). Art never touches the repo.
@@ -499,6 +500,14 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-16: Security follow-ups (filename XSS, CSP, upload/disk guards, path scrub)
+A read-only security review (private home-network deployment) found no committed secrets; the items it flagged were fixed this session.
+- **Stored XSS fixed.** The control panel rendered an uploaded filename (`original_name`, attacker-controlled) into `innerHTML` unescaped. Added an `esc()` helper, used for `original_name` in the Library and Rotation views. Verified in-browser: a `"><img onerror=...>` filename now renders as literal text, no script runs.
+- **Content-Security-Policy added** (defense in depth): a strict header (`script-src 'self'`, no inline, etc.). All scripts and styles are external same-origin files, so it broke nothing; the control panel and display both load clean.
+- **Upload + disk guards (§8).** Per-file size cap (`OO_MAX_UPLOAD_MB`, default 512 MB) and a per-request file count (`OO_MAX_UPLOAD_FILES`, default 50); an oversize file is refused (HTTP 413) with no orphan left on disk. A pre-flight free-space check (`OO_MIN_FREE_MB`, default 2048 MB) refuses uploads (HTTP 507) before the eMMC can fill and wedge the frame. The control panel surfaces the server's message on a failed upload.
+- **Privacy.** Scrubbed the local macOS home path from this doc (now `~/Code/OpenObject`); future commits use a GitHub noreply email (past commits keep the old address).
+- **Deferred (to discuss):** the control panel has no auth and binds `0.0.0.0` (open on the LAN, §10). With IoT devices on the network this is worth an optional password; tracked separately, not built yet.
 
 ### 2026-06-15: Reboot / Shut down made real on the frame (§17 closed)
 The Reboot and Shut down buttons were inert stubs; they now actually reboot / power off the installed frame, closing the §17 "real device power-off and reboot" item.

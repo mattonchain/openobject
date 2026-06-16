@@ -91,8 +91,13 @@ const storage = multer.diskStorage({
     cb(null, `${stamp}.${info.format}`);
   },
 });
+// Per-upload limits so a LAN client cannot fill the disk in one shot (HANDOFF §8 hardening).
+// Defaults are roomy for real art (large video included) and overridable via env at the bench.
+const MAX_UPLOAD_MB = Number(process.env.OO_MAX_UPLOAD_MB) || 512;
+const MAX_UPLOAD_FILES = Number(process.env.OO_MAX_UPLOAD_FILES) || 50;
 const upload = multer({
   storage,
+  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: MAX_UPLOAD_FILES },
   fileFilter: (req, file, cb) => {
     if (classify(file.originalname)) return cb(null, true);
     (req.skipped ||= []).push(file.originalname); // unsupported → skip, don't error
@@ -100,7 +105,22 @@ const upload = multer({
   },
 });
 
-app.post('/api/upload', upload.array('files'), (req, res) => {
+// Refuse uploads before the disk gets dangerously full, so the OS, the database, and the
+// player stay responsive (HANDOFF §8 hardening). Pre-flight check on the uploads volume; if
+// statfs is unavailable we do not block. Keep ~2 GB headroom by default (override via env).
+const MIN_FREE_MB = Number(process.env.OO_MIN_FREE_MB) || 2048;
+async function ensureDiskSpace(_req, res, next) {
+  try {
+    const st = await fs.promises.statfs(db.UPLOADS_DIR);
+    const freeMB = (st.bavail * st.bsize) / (1024 * 1024);
+    if (freeMB < MIN_FREE_MB) {
+      return res.status(507).json({ error: 'Not enough free space on the frame. Delete some art and try again.' });
+    }
+  } catch { /* statfs unavailable: do not block uploads */ }
+  next();
+}
+
+app.post('/api/upload', ensureDiskSpace, upload.array('files'), (req, res) => {
   const added = (req.files || []).map((f) => {
     const info = classify(f.originalname);
     return db.addLibraryItem({
@@ -359,6 +379,15 @@ app.get('/healthz', (_req, res) => {
 // JSON error responses for the API (e.g. multer rejections) instead of HTML stack traces.
 app.use((err, _req, res, _next) => {
   console.error(err);
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: `That file is too large. The limit is ${MAX_UPLOAD_MB} MB per file.` });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: `Too many files at once. Please add up to ${MAX_UPLOAD_FILES} at a time.` });
+    }
+    return res.status(400).json({ error: err.message });
+  }
   res.status(400).json({ error: err.message });
 });
 

@@ -92,7 +92,9 @@ iPhone, iPad, or PC.
 
 **Add art.** On the **Library** tab, drag image or video files onto the page, or tap to choose
 them. They upload straight to the frame. Supported types: **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV,
-WebM**. Anything else is simply skipped, with nothing changed or converted.
+WebM**. Anything else is simply skipped, with nothing changed or converted. Very large files (over
+512 MB) are skipped as well, and if the frame is low on storage it will ask you to remove some art
+before adding more.
 
 **Your Library vs the Rotation.** Everything you upload stays in the **Library**. The **Rotation**
 is the set that's actually showing on the wall. The control panel has three tabs:
