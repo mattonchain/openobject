@@ -605,20 +605,48 @@ async function doRestart() {
   }
 }
 
-// Phase-1 stub: there's no device to power off on the dev Mac (HANDOFF §10). Surfaces the server's
-// explanation; Phase 2 wires this to a real power-off on the frame.
+// Reboot / Shut down are real on the installed frame (systemctl, via the polkit grant from
+// install.sh) and inert stubs off-device, so the dev Mac is never touched. Each reports a clear
+// message if the grant is not in place yet, and treats a dropped connection as the frame going
+// down (HANDOFF §17).
 async function doShutdown() {
-  const res = await fetch('/api/system/shutdown', { method: 'POST' }).then((r) => r.json()).catch(() => null);
-  restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
-  setPowerStatus(escapeHtml((res && res.message) || 'Shut down runs on the installed frame.'));
+  setPowerStatus('Shutting down the frame…');
+  let res = null;
+  try { res = await fetch('/api/system/shutdown', { method: 'POST' }).then((r) => r.json()); } catch { /* dropped: the frame is powering off */ }
+  if (res && res.stub) {
+    restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
+    return setPowerStatus(escapeHtml(res.message));
+  }
+  if (res && res.ok === false) {
+    restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
+    return setPowerStatus('Couldn’t shut the frame down: ' + escapeHtml(res.error || 'unknown') + '. You can power-cycle at the outlet instead.');
+  }
+  // ok, or the connection dropped as it went down: the frame is powering off and will not return
+  // until power is restored, so leave the buttons disabled.
+  setPowerStatus('The frame is shutting down. Restore power at the outlet to turn it back on.');
 }
 
-// Phase-1 stub like Shut down: no device to reboot on the dev Mac. Phase 2 wires this to a real
-// `systemctl reboot` on the frame for OS-level issues (HANDOFF §17).
 async function doReboot() {
-  const res = await fetch('/api/system/reboot', { method: 'POST' }).then((r) => r.json()).catch(() => null);
+  setPowerStatus('Rebooting the frame…');
+  let before = null;
+  try { before = (await fetch('/healthz', { cache: 'no-store' }).then((r) => r.json())).boot; } catch {}
+  let res = null;
+  try { res = await fetch('/api/system/reboot', { method: 'POST' }).then((r) => r.json()); } catch { /* dropped: the frame is going down */ }
+  if (res && res.stub) {
+    restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
+    return setPowerStatus(escapeHtml(res.message));
+  }
+  if (res && res.ok === false) {
+    restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
+    return setPowerStatus('Couldn’t reboot the frame: ' + escapeHtml(res.error || 'unknown') + '. You can power-cycle at the outlet instead.');
+  }
+  // ok, or a dropped connection: the whole frame is rebooting. A full OS reboot is slower than an
+  // app restart, so wait a few minutes for it to come back, then refresh.
+  setPowerStatus('Rebooting the frame… it should be back in about a minute.');
+  const h = await pollHealthz((x) => x.boot && x.boot !== before, 180000);
   restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
-  setPowerStatus(escapeHtml((res && res.message) || 'Reboot runs on the installed frame.'));
+  if (h) { setPowerStatus('<span class="upd-ok">✓</span> The frame is back.'); await refresh(); }
+  else setPowerStatus('The frame is rebooting and should be back shortly. Reload this page in a minute.');
 }
 
 // Show how to reach this panel from another device — real and useful today (HANDOFF §11).

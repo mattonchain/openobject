@@ -214,13 +214,13 @@ The physical power button is hard to reach when wall-mounted. This is fully solv
 - **Soft restart / reboot / shutdown (web UI):** the control panel exposes **Restart** (the player), **Reboot** (the whole device), and **Shut down**, initiated from the owner's browser. Handles all intentional reboots without reaching behind the panel.
 - **Hard lockup (rare):** power-cycle the outlet; an optional ~$15 smart plug makes this a phone tap. Not required.
 
-**Built 2026-06-13 (§20).** The control panel's **Settings → Power** card ships **Restart** and
+**Built 2026-06-13 (§20).** The control panel's **Settings → Power** card ships **Restart**, **Reboot**, and
 **Shut down**. **Restart is real now**: an app-level soft-restart via the supervisor (exit →
 relaunch, the same path as self-update, §15), so it works browser-only with no hardware and behaves
-identically once systemd runs it on the device. **Shut down** is a visible-but-inert **stub** in
-Phase 1, the dev Mac has nothing to power off and must not be powered off; Phase 2 wires it to a
-real OS power-off (e.g. `systemctl poweroff`). Phase 2 can also add a **full device reboot**
-(`systemctl reboot`) alongside the app-restart, the bigger hammer for OS-level issues. Per the
+identically once systemd runs it on the device. **Reboot** (`systemctl reboot`) and **Shut down** (`systemctl poweroff`) are real on the installed
+Linux frame, carried out by systemd via a one-time polkit grant the installer adds for the
+`openobject` user; off-device (the dev Mac, which must never be powered off) they stay inert stubs
+that only return a message. Per the
 Auto-Power-On point above, a real power-off returns when power is restored, so a true "stays off"
 is the outlet / smart plug.
 
@@ -467,7 +467,6 @@ Maintain **two** living documents as the build proceeds, not one written once an
 - **SVG support.** Trivial to add under the browser-render approach if wanted later; deferred because it renders unpredictably at arbitrary sizes.
 - **Global "allow audio" toggle.** v1 is muted-always.
 - **Smart-plug integration** for hard-lockout recovery.
-- **Real device power-off and reboot.** The control panel's **Restart** is an app-level soft-restart (the player exits and systemd relaunches it). **Reboot** and **Shut down** are both present in the Power controls but are still inert stubs that only return a message. Wire **Shut down to `systemctl poweroff`** and **Reboot to `systemctl reboot`** for OS-level issues, both through a one-time privilege grant (a polkit rule) in `installer/install.sh`. Small and self-contained. Logged 2026-06-14; the **Reboot** button (stub) was added 2026-06-15, so the remaining work is just the polkit grant plus the two `systemctl` calls.
 
 ---
 
@@ -500,6 +499,12 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-15: Reboot / Shut down made real on the frame (§17 closed)
+The Reboot and Shut down buttons were inert stubs; they now actually reboot / power off the installed frame, closing the §17 "real device power-off and reboot" item.
+- **server.js:** Reboot runs `systemctl reboot`, Shut down runs `systemctl poweroff`, but only on the Linux device (`process.platform`); off-device (the dev Mac) both stay inert stubs, so a dev machine is never powered off. A missing grant is reported rather than failing silently, and the panel treats a dropped connection as the frame going down (polling it back after a reboot).
+- **installer/install.sh:** installs polkit and writes a scoped polkit rule letting the `openobject` user run those two actions without a password (the `-multiple-sessions` variants included, since the kiosk session is always active).
+- **Existing frames** (provisioned before this) apply the grant once: self-update, then re-run `sudo bash /opt/openobject/installer/install.sh`. New installs get it automatically. The real path was written on macOS (where it verifies as a safe stub) and confirmed on the frame.
 
 ### 2026-06-15: Control panel polish: doc-only updates no longer nag, plus a Reboot button
 Two next-owner UX fixes the landing-page work surfaced:

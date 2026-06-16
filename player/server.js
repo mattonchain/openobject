@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const { execFile } = require('node:child_process');
 const express = require('express');
 const multer = require('multer');
 
@@ -300,21 +301,31 @@ app.post('/api/system/restart', (_req, res) => {
   if (SUPERVISED) setTimeout(() => process.exit(RESTART_CODE), 350); // let the response flush first
 });
 
-// Reboot the whole device (HANDOFF §17), the bigger hammer than the app-level Restart above, for
-// OS-level issues. Phase 1 has no device to reboot (and must never reboot the dev Mac), so this is
-// an inert, clearly-labelled stub. Phase 2 wires it to a real `systemctl reboot` via a one-time
-// polkit grant in installer/install.sh, the same grant that turns Shut down into a real poweroff.
-app.post('/api/system/reboot', (_req, res) => {
-  res.json({ ok: false, stub: true, message: 'Reboot runs on the installed frame. There is nothing to reboot in this preview.' });
-});
+// Reboot / shut down the whole device (HANDOFF §17). Real on the installed Linux frame, where
+// systemd carries it out; an inert stub anywhere else, so this can NEVER power off a dev Mac. The
+// one-time polkit grant in installer/install.sh is what lets the unprivileged `openobject` user
+// run these; without it logind refuses and we report that, leaving the frame untouched.
+const IS_DEVICE = process.platform === 'linux';
+function powerAction(verb, res) { // verb: 'reboot' | 'poweroff'
+  const noun = verb === 'reboot' ? 'Reboot' : 'Shut down';
+  if (!IS_DEVICE) {
+    return res.json({ ok: false, stub: true, message: `${noun} only works on the installed frame; there is nothing to ${verb === 'reboot' ? 'reboot' : 'power off'} in this preview.` });
+  }
+  // systemctl returns 0 once the job is queued, then the box goes down, so a success reply may not
+  // reach the panel (the connection drops). A fast non-zero is a real refusal (usually a missing
+  // polkit grant), which we report so nothing looks hung. Either way we respond from the callback.
+  execFile('systemctl', [verb], { timeout: 10000 }, (err, _stdout, stderr) => {
+    if (err) return res.json({ ok: false, error: (stderr || err.message || `could not ${verb}`).toString().trim(), needsGrant: true });
+    res.json({ ok: true, [verb === 'reboot' ? 'rebooting' : 'poweringOff']: true });
+  });
+}
 
-// Shut down the device (HANDOFF §10) — a hardware action. Phase 1 has no device to power off (and
-// must never power off the dev Mac), so this is an inert, clearly-labelled stub. Phase 2 wires it
-// to a real OS power-off (e.g. `systemctl poweroff`); with BIOS Auto-Power-On the unit returns when
-// power is restored, so a true "off" is the wall outlet / smart plug (§10).
-app.post('/api/system/shutdown', (_req, res) => {
-  res.json({ ok: false, stub: true, message: 'Shut down runs on the installed frame — there’s nothing to power off in this preview.' });
-});
+app.post('/api/system/reboot', (_req, res) => powerAction('reboot', res));
+
+// Shut down powers the frame off via `systemctl poweroff` (see powerAction above). With BIOS
+// Auto-Power-On the unit returns when power is restored, so a true "off" is the wall outlet or a
+// smart plug (HANDOFF §10, §17).
+app.post('/api/system/shutdown', (_req, res) => powerAction('poweroff', res));
 
 // ── Pages ───────────────────────────────────────────────────────────
 // The kiosk display surface (HANDOFF §6). In Phase 2 Chromium boots straight to this.

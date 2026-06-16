@@ -9,9 +9,9 @@
 #
 # What it does, in order (network-dependent work first, the Wi-Fi handoff last):
 #   1. Install OS packages: Chromium + cage (kiosk), Avahi (openobject.local), NetworkManager,
-#      Intel iGPU drivers, fonts.
+#      Intel iGPU drivers, polkit (for the Reboot / Shut down power controls), fonts.
 #   2. Install Node 22 from NodeSource (Debian's Node is too old for node:sqlite).
-#   3. Create the `openobject` service user + /var/lib/openobject runtime dirs.
+#   3. Create the `openobject` service user + runtime dirs, and grant it reboot/poweroff (polkit).
 #   4. Point the checkout's git origin at GitHub (so self-update works) + npm install.
 #   5. Install + enable the two systemd units (player + kiosk) that replace supervisor.js.
 #   6. Set the hostname to `openobject` and start Avahi → reachable at openobject.local.
@@ -61,6 +61,12 @@ apt-get install -y \
   || die "apt-get install failed — is the network up?"
 ok "packages installed"
 
+# polkit lets the unprivileged `openobject` user run `systemctl reboot` / `poweroff` for the control
+# panel's Reboot and Shut down buttons (granted by the rule written in step 3). Package name differs
+# across Debian releases: polkitd on bookworm and newer, policykit-1 on bullseye.
+apt-get install -y polkitd >/dev/null 2>&1 || apt-get install -y policykit-1 >/dev/null 2>&1 \
+  || warn "polkit not installed; Reboot / Shut down may not work until it is"
+
 # SSH is installed for servicing but left OFF by default: a shipped frame opens no port until
 # its owner turns it on with `sudo systemctl enable --now ssh`. (Documented in the Setup Guide.)
 systemctl disable --now ssh.socket  >/dev/null 2>&1 || true
@@ -101,6 +107,27 @@ done
 install -d -o "$OO_USER" -g "$OO_GROUP" \
   "$DATA_ROOT" "$DATA_ROOT/data" "$DATA_ROOT/uploads" "$DATA_ROOT/chromium"
 ok "user ready; runtime data under $DATA_ROOT"
+
+# Power controls: let the player's service user reboot / power off through logind without a password,
+# so the control panel's Reboot and Shut down buttons work (HANDOFF section 17). Scoped to $OO_USER
+# and just those actions. The -multiple-sessions variants matter because the kiosk (cage) session is
+# always active, which makes logind treat a reboot/power-off as affecting other sessions.
+install -d -m 0755 /etc/polkit-1/rules.d
+cat > /etc/polkit-1/rules.d/49-openobject-power.rules <<POLKIT
+// OpenObject: allow the '${OO_USER}' service user to reboot / power off the frame (HANDOFF section 17).
+polkit.addRule(function(action, subject) {
+  if (subject.user == "${OO_USER}" &&
+      (action.id == "org.freedesktop.login1.reboot" ||
+       action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+       action.id == "org.freedesktop.login1.power-off" ||
+       action.id == "org.freedesktop.login1.power-off-multiple-sessions")) {
+    return polkit.Result.YES;
+  }
+});
+POLKIT
+chmod 0644 /etc/polkit-1/rules.d/49-openobject-power.rules
+systemctl try-restart polkit >/dev/null 2>&1 || systemctl try-restart polkitd >/dev/null 2>&1 || true
+ok "power controls granted to $OO_USER (Reboot / Shut down)"
 
 # ── 4. Seed the checkout + git origin + deps ────────────────────────────────────────
 log "OpenObject checkout at $TARGET"
