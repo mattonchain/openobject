@@ -1,9 +1,9 @@
 # OpenObject: Build & Handoff Specification
 
 > **Document type:** Implementation spec for Claude Code.
-> **Status:** Build in progress (Phase 0–1). The web app is built and tested on macOS first; hardware/Linux work (Phase 2) is deferred until bench access. See §20 for the decision log.
+> **Status:** Running on real hardware. The web app (Phase 1) plus the Debian and Chromium-kiosk installer (Phase 2B) are built and verified on an actual XXL frame, with over-the-air self-update working. What's left is later milestones (single-file release image, Wi-Fi onboarding AP, real restart/shutdown). See §20 for the decision log.
 > **Local project root:** `/Users/mattlhx/Code/OpenObject`
-> **GitHub repo:** Created **private** during development (2026-06-11); intended to go public later. Claude drives all git operations on Matt's approval.
+> **GitHub repo:** `mattonchain/openobject`, **public** since 2026-06-14 (created private 2026-06-11). Claude drives all git operations on Matt's approval.
 > **Website:** https://openobject.io
 
 ---
