@@ -176,6 +176,31 @@ async function manifestsChanged(a, b) {
   return r.code === 0 && r.stdout.length > 0;
 }
 
+// Files that would change in the working tree if we fast-forwarded to the target.
+async function changedFiles(targetRef) {
+  const r = await git('diff', '--name-only', `HEAD..${targetRef}`);
+  if (r.code !== 0 || !r.stdout) return [];
+  return r.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+}
+
+// Does this path run on the frame? Doc/website/meta paths (docs/, site/, README, LICENSE,
+// .github, the handoff PDF) are neither served nor executed by the player, so a change confined
+// to them is invisible on the frame and must not prompt an "Update & restart." Everything else,
+// player/, assets/ (the branding the display serves live from /assets), installer/, and any NEW
+// path, counts as a real update: unknown paths default to "real" so a genuine update is never hidden.
+function isAppRelevantPath(file) {
+  const cosmetic =
+    file.startsWith('docs/') ||
+    file.startsWith('site/') ||
+    file.startsWith('.github/') ||
+    file === 'README.md' ||
+    file === 'LICENSE' ||
+    file === 'CLAUDE.md' ||
+    file === '.gitignore' ||
+    file === 'OpenObject-HANDOFF.pdf';
+  return !cosmetic;
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 // Instant, no-network status for page load: what we're running + the channel. Offline-safe.
@@ -217,6 +242,14 @@ async function check() {
 
   const { behind, ahead, canFastForward } = await compare(target.ref);
   const targetSha = await shortSha(target.ref);
+
+  // Surface only updates the owner can act on: a fast-forward that changes something the frame
+  // actually runs. If every incoming file is doc/website/meta (see isAppRelevantPath), the frame
+  // is effectively up to date, so report no update rather than nag a pointless restart.
+  const files = behind > 0 ? await changedFiles(target.ref) : [];
+  const appRelevant = files.some(isAppRelevantPath);
+  const updateAvailable = behind > 0 && appRelevant;
+
   return {
     ...common,
     ok: true,
@@ -224,13 +257,14 @@ async function check() {
     behind,
     ahead,
     dirty: await isDirty(),
-    updateAvailable: behind > 0,
+    updateAvailable,
+    cosmeticOnly: behind > 0 && !appRelevant,
     canFastForward,
     diverged: ahead > 0,
-    subjects: behind > 0 ? await incomingSubjects(target.ref) : [],
+    subjects: updateAvailable ? await incomingSubjects(target.ref) : [],
     // Link "What's new" to the exact diff on GitHub (current → target), for the curious.
     compareUrl:
-      behind > 0 && common.repoUrl && common.commit && targetSha
+      updateAvailable && common.repoUrl && common.commit && targetSha
         ? `${common.repoUrl}/compare/${common.commit}...${targetSha}`
         : null,
   };
@@ -298,6 +332,7 @@ async function apply() {
 module.exports = {
   getChannel,
   setChannel,
+  isAppRelevantPath,
   localStatus,
   check,
   apply,

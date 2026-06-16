@@ -211,7 +211,7 @@ The physical power button is hard to reach when wall-mounted. This is fully solv
 
 - **Auto Power On (BIOS):** enabled during reflash (§4). The unit boots the moment it receives power. Power control becomes the wall outlet (or an optional smart plug). Also means the frame **self-recovers after a power blip** instead of waiting for a button press.
     - **Confirmed (Matt, 2026-06-13):** this unit **boots when the power cord is unplugged and replugged**, so cycling the outlet reliably boots it and the hard-to-reach physical power button is a **non-issue**. After a **Shut down**, you power the frame back on by replugging (or toggling a smart plug). **Resolved at bench:** there is **no Auto-Power-On toggle** in this BIOS (checked `Chipset → PCH-IO Configuration`, no "State After G3" / "Restore AC Power Loss"); auto-on is the **firmware default**, which is exactly this replug-boot behavior. Nothing to set.
-- **Soft restart / shutdown (web UI):** the control panel exposes **Restart** and **Shut down**, initiated from the owner's browser. Handles all intentional reboots without reaching behind the panel.
+- **Soft restart / reboot / shutdown (web UI):** the control panel exposes **Restart** (the player), **Reboot** (the whole device), and **Shut down**, initiated from the owner's browser. Handles all intentional reboots without reaching behind the panel.
 - **Hard lockup (rare):** power-cycle the outlet; an optional ~$15 smart plug makes this a phone tap. Not required.
 
 **Built 2026-06-13 (§20).** The control panel's **Settings → Power** card ships **Restart** and
@@ -350,6 +350,9 @@ player. The idle/boot screen flashes briefly; the panel returns on the new versi
 **Guardrails:**
 - **Fast-forward only**, never a force-reset. If the checkout has diverged (local
   edits) the update refuses and says so rather than clobbering it.
+- **App-relevant changes only.** A check counts only commits that change what the frame
+  runs (`player/`, the served `assets/`, `installer/`). Commits confined to docs, the
+  website (`site/`), or repo meta report **up to date** instead of nagging a restart.
 - **Runtime data is never touched.** `player/data/` and uploads are gitignored, so a
   pull never disturbs the library, settings, or art.
 - **Update channel** (setting): track the **`main`** branch (default) or **tagged
@@ -464,7 +467,7 @@ Maintain **two** living documents as the build proceeds, not one written once an
 - **SVG support.** Trivial to add under the browser-render approach if wanted later; deferred because it renders unpredictably at arbitrary sizes.
 - **Global "allow audio" toggle.** v1 is muted-always.
 - **Smart-plug integration** for hard-lockout recovery.
-- **Real device power-off and reboot.** Today the control panel's **Restart** is an app-level soft-restart (the player exits and systemd relaunches it), and **Shut down** is still an inert stub on the device that only returns a message. Wire **Shut down to `systemctl poweroff`** and add a true **device reboot (`systemctl reboot`)** for OS-level issues, both through a one-time privilege grant (a polkit rule) in `installer/install.sh`. Small and self-contained. Logged 2026-06-14, after the first bench self-update made the dead Shut down button on the real frame obvious.
+- **Real device power-off and reboot.** The control panel's **Restart** is an app-level soft-restart (the player exits and systemd relaunches it). **Reboot** and **Shut down** are both present in the Power controls but are still inert stubs that only return a message. Wire **Shut down to `systemctl poweroff`** and **Reboot to `systemctl reboot`** for OS-level issues, both through a one-time privilege grant (a polkit rule) in `installer/install.sh`. Small and self-contained. Logged 2026-06-14; the **Reboot** button (stub) was added 2026-06-15, so the remaining work is just the polkit grant plus the two `systemctl` calls.
 
 ---
 
@@ -497,6 +500,11 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-15: Control panel polish: doc-only updates no longer nag, plus a Reboot button
+Two next-owner UX fixes the landing-page work surfaced:
+- **Update check is now path-aware.** `check()` reads the files an incoming fast-forward would change and reports an update only when something the frame actually runs is among them (`player/`, the served `assets/`, `installer/`). Commits confined to `docs/`, the website (`site/`), or repo meta now report "up to date" instead of prompting a pointless Update & Restart. Denylist-based, so unknown or new paths still count as a real update (a genuine update is never hidden). Verified against the real `a134b72..HEAD` range (all docs/site) reading as up to date.
+- **Reboot button added** to the Power controls, between Restart and Shut down. Like Shut down it is an inert stub for now; the real `systemctl reboot` / `poweroff` wiring stays the §17 task (one polkit grant in `install.sh` away).
 
 ### 2026-06-15: openobject.io landing page live
 A public landing page now lives at **https://openobject.io** (and `www.` redirects to the apex), served by GitHub Pages with an enforced HTTPS certificate.

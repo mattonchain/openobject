@@ -138,10 +138,10 @@ OpenObject logo dimmed and stops playing, then picks the rotation back up on its
 right now?** Tap **Blank screen** at the top of the control panel, and the art goes dark until you
 tap it again.
 
-**Restart or shut down** *(Settings tab)*. **Restart** restarts the OpenObject software, handy if
-the app seems stuck. (It doesn't reboot the frame's hardware; for that, power-cycle the outlet.)
-**Shut down** turns off the frame (this works once OpenObject is installed on the frame). Neither
-needs you to reach behind it.
+**Power** *(Settings tab)*. **Restart** restarts the OpenObject software, handy if the app seems
+stuck. **Reboot** restarts the whole frame, and **Shut down** turns it off. If a control ever
+doesn't take, you can always **power-cycle at the outlet**. None of them need you to reach behind
+the frame.
 
 **Reaching the frame** *(Settings, Wi-Fi)*. You set the frame's Wi-Fi while installing it. The
 Wi-Fi section of the control panel lists the addresses you can open it at from another device.
@@ -158,7 +158,9 @@ Tap **Check for updates**. If a newer version is available you'll see a short li
 (plus a **What's new** link for the full details), then tap **Update & Restart**. The frame briefly
 shows the OpenObject screen and comes back on the new version, and **your art and settings are
 kept**. Updates only happen when you ask, nothing changes on its own, and the frame just needs to be
-online to check. Not ready? **Not now** dismisses it.
+online to check. Changes that don't run on the frame, like the docs or the website, won't appear
+here, so a check that finds only those simply says you're up to date. Not ready? **Not now**
+dismisses it.
 
 If the frame ever says it has **local changes** and can't update automatically, that's a safety stop
 so nothing of yours gets overwritten. Your art keeps playing either way, and you can ask whoever set

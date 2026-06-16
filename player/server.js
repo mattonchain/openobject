@@ -300,6 +300,14 @@ app.post('/api/system/restart', (_req, res) => {
   if (SUPERVISED) setTimeout(() => process.exit(RESTART_CODE), 350); // let the response flush first
 });
 
+// Reboot the whole device (HANDOFF §17), the bigger hammer than the app-level Restart above, for
+// OS-level issues. Phase 1 has no device to reboot (and must never reboot the dev Mac), so this is
+// an inert, clearly-labelled stub. Phase 2 wires it to a real `systemctl reboot` via a one-time
+// polkit grant in installer/install.sh, the same grant that turns Shut down into a real poweroff.
+app.post('/api/system/reboot', (_req, res) => {
+  res.json({ ok: false, stub: true, message: 'Reboot runs on the installed frame. There is nothing to reboot in this preview.' });
+});
+
 // Shut down the device (HANDOFF §10) — a hardware action. Phase 1 has no device to power off (and
 // must never power off the dev Mac), so this is an inert, clearly-labelled stub. Phase 2 wires it
 // to a real OS power-off (e.g. `systemctl poweroff`); with BIOS Auto-Power-On the unit returns when

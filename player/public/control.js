@@ -41,6 +41,7 @@ const updStatus = document.getElementById('updStatus');
 
 const restartBtn = document.getElementById('restartBtn');
 const shutdownBtn = document.getElementById('shutdownBtn');
+const rebootBtn = document.getElementById('rebootBtn');
 const powerStatus = document.getElementById('powerStatus');
 const reachEl = document.getElementById('reach');
 const frameAddr = document.getElementById('frameAddr');
@@ -556,6 +557,7 @@ function clearCountdown() {
 function armPowerAction(gerund, seconds, run) {
   clearCountdown();
   restartBtn.disabled = true;
+  rebootBtn.disabled = true;
   shutdownBtn.disabled = true;
   let remaining = seconds;
   powerStatus.innerHTML =
@@ -576,6 +578,7 @@ function armPowerAction(gerund, seconds, run) {
 function cancelPowerAction() {
   clearCountdown();
   restartBtn.disabled = false;
+  rebootBtn.disabled = false;
   shutdownBtn.disabled = false;
   setPowerStatus('Cancelled.');
 }
@@ -589,11 +592,11 @@ async function doRestart() {
   let res = null;
   try { res = await fetch('/api/system/restart', { method: 'POST' }).then((r) => r.json()); } catch { /* dropped by the restart */ }
   if (res && res.needsManualRestart) {
-    restartBtn.disabled = false; shutdownBtn.disabled = false;
+    restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
     return setPowerStatus('Restart isn’t available here — start the player with the supervisor (npm start) to enable it.');
   }
   const h = await pollHealthz((x) => x.boot && x.boot !== before);
-  restartBtn.disabled = false; shutdownBtn.disabled = false;
+  restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
   if (h) {
     setPowerStatus('<span class="upd-ok">✓</span> Restarted — the control panel is back.');
     await refresh();
@@ -606,8 +609,16 @@ async function doRestart() {
 // explanation; Phase 2 wires this to a real power-off on the frame.
 async function doShutdown() {
   const res = await fetch('/api/system/shutdown', { method: 'POST' }).then((r) => r.json()).catch(() => null);
-  restartBtn.disabled = false; shutdownBtn.disabled = false;
+  restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
   setPowerStatus(escapeHtml((res && res.message) || 'Shut down runs on the installed frame.'));
+}
+
+// Phase-1 stub like Shut down: no device to reboot on the dev Mac. Phase 2 wires this to a real
+// `systemctl reboot` on the frame for OS-level issues (HANDOFF §17).
+async function doReboot() {
+  const res = await fetch('/api/system/reboot', { method: 'POST' }).then((r) => r.json()).catch(() => null);
+  restartBtn.disabled = false; rebootBtn.disabled = false; shutdownBtn.disabled = false;
+  setPowerStatus(escapeHtml((res && res.message) || 'Reboot runs on the installed frame.'));
 }
 
 // Show how to reach this panel from another device — real and useful today (HANDOFF §11).
@@ -698,6 +709,7 @@ checkUpdateBtn.addEventListener('click', checkUpdate);
 applyUpdateBtn.addEventListener('click', applyUpdate);
 dismissUpdateBtn.addEventListener('click', dismissUpdate);
 restartBtn.addEventListener('click', () => armPowerAction('Restarting', 5, doRestart));
+rebootBtn.addEventListener('click', () => armPowerAction('Rebooting', 10, doReboot));
 shutdownBtn.addEventListener('click', () => armPowerAction('Shutting down', 10, doShutdown));
 
 drop.addEventListener('click', () => fileInput.click());
