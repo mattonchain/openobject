@@ -179,10 +179,14 @@ hostnamectl set-hostname openobject || warn "could not set hostname"
 systemctl enable --now avahi-daemon || warn "avahi-daemon not started"
 ok "advertising openobject.local"
 
-# ── 7. Quiet, panel-friendly boot ───────────────────────────────────────────────────
-log "Quieting the boot for the panel"
+# ── 7. Kernel command line: quiet boot + reliable reboot ────────────────────────────
+log "Setting the kernel command line"
 GRUB_DEFAULT_FILE=/etc/default/grub
-DESIRED='quiet loglevel=3 consoleblank=0 vt.global_cursor_default=0'
+# reboot=pci makes `systemctl reboot` use the Intel 0xCF9 platform reset. This board's firmware
+# default (ACPI reset) intermittently hangs at the POST splash on a warm reboot and needs a cold
+# unplug to recover; the 0xCF9 full reset survives it (bench-verified 2026-06-17). Shut down
+# (poweroff) uses a separate path and is unaffected.
+DESIRED='quiet loglevel=3 consoleblank=0 vt.global_cursor_default=0 reboot=pci'
 if [ -f "$GRUB_DEFAULT_FILE" ]; then
   if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$GRUB_DEFAULT_FILE"; then
     sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$DESIRED\"|" "$GRUB_DEFAULT_FILE"
