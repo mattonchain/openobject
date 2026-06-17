@@ -165,13 +165,19 @@ log "Installing player dependencies (npm ci)"
 ok "dependencies installed"
 
 # ── 5. systemd units ────────────────────────────────────────────────────────────────
-log "Installing systemd units (player + kiosk)"
-chmod +x "$TARGET"/installer/kiosk/*.sh
-install -m 0644 "$TARGET/installer/systemd/openobject-player.service" /etc/systemd/system/
-install -m 0644 "$TARGET/installer/systemd/openobject-kiosk.service"  /etc/systemd/system/
+log "Installing systemd units (player + kiosk + Wi-Fi watchdog)"
+chmod +x "$TARGET"/installer/kiosk/*.sh "$TARGET"/installer/net/*.sh
+install -m 0644 "$TARGET/installer/systemd/openobject-player.service"   /etc/systemd/system/
+install -m 0644 "$TARGET/installer/systemd/openobject-kiosk.service"    /etc/systemd/system/
+install -m 0644 "$TARGET/installer/systemd/openobject-netcheck.service" /etc/systemd/system/
+install -m 0644 "$TARGET/installer/systemd/openobject-netcheck.timer"   /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable openobject-player.service openobject-kiosk.service
-ok "units enabled (they start on boot)"
+# Wi-Fi watchdog: re-ups Wi-Fi only when the frame has already lost its network (the ifupdown
+# bring-up at boot does not retry; see installer/net/oo-netcheck.sh). Enable + start now so the
+# safety net is live immediately, without waiting for a reboot.
+systemctl enable --now openobject-netcheck.timer
+ok "units enabled (player + kiosk on boot; Wi-Fi watchdog timer running)"
 
 # ── 6. Hostname + Avahi (openobject.local) ──────────────────────────────────────────
 log "Hostname + mDNS"

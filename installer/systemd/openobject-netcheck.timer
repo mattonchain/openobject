@@ -1,0 +1,14 @@
+[Unit]
+# Runs the OpenObject Wi-Fi watchdog (openobject-netcheck.service) periodically (HANDOFF §3, §20).
+# First check 60s after boot (past the normal association window), then every 30s. Combined with
+# the script's own ~5s recheck, a raced cold boot self-heals in roughly 60-90s instead of needing
+# a manual power-cycle.
+Description=Periodic OpenObject Wi-Fi watchdog
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

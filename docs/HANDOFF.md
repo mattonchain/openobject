@@ -72,9 +72,13 @@ The OS image should boot directly into the OpenObject display with no desktop, l
   window manager, no display manager. (X11 + Openbox is the documented fallback if cage
   misbehaves on the N5105 iGPU, see `installer/README.md`.)
 - **Services:** **systemd** runs the player and the kiosk (replacing `player/supervisor.js`,
-  §15). **Avahi** advertises `openobject.local`; **NetworkManager** owns Wi-Fi (the foundation
-  for the §11 setup-AP). Intel iGPU + VA-API drivers and `libavcodec-extra` are installed for
-  hardware decode (WebM is always safe; the codec package widens MP4/H.264 support).
+  §15). **Avahi** advertises `openobject.local`. Wi-Fi on the installed frame is owned by
+  **ifupdown** (what the Debian netinst sets up: `allow-hotplug` + `wpa_supplicant`);
+  **NetworkManager** is installed for the future §11 setup-AP but does not manage Wi-Fi yet.
+  Because the ifupdown bring-up runs once at boot and never retries, a small
+  **`openobject-netcheck`** systemd timer re-ups Wi-Fi if a cold boot ever leaves the frame with
+  no network (the rejoin race; see §20). Intel iGPU + VA-API drivers and `libavcodec-extra` are
+  installed for hardware decode (WebM is always safe; the codec package widens MP4/H.264 support).
 - The build tooling lives in `installer/` (`install.sh`, `systemd/`, `kiosk/`, `README.md`).
 
 ---
@@ -502,6 +506,15 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-17: Wi-Fi rejoin race fixed (openobject-netcheck watchdog)
+Second of the two follow-ups parked after the reboot fix. (The first, syncing the frame's installer checkout, was closed by an ordinary self-update: the frame's `/opt/openobject` now matches `main`, so re-running `install.sh` re-applies reboot=pci + SSH-on instead of stripping them.)
+
+Symptom: on a cold boot the frame could come up display-but-no-network (art on screen, control panel unreachable from any device) and stay that way until a manual power-cycle. Root cause: on the installed frame Wi-Fi is owned by **ifupdown** (the `allow-hotplug wlp0s20f3` + `wpa_supplicant` connection the Debian netinst created), not NetworkManager (NM is installed but leaves the device `unmanaged`, so the installer's §8 NM handoff no-ops). ifupdown brings Wi-Fi up once at boot and never retries, so a race where the radio or the access point isn't ready in time leaves the frame offline with nothing to recover it.
+
+Fix (additive, low-risk: the "small reconnect unit" option we parked): a new **`openobject-netcheck`** systemd timer + oneshot service runs `installer/net/oo-netcheck.sh` every ~30s (first check 60s after boot). It re-ups Wi-Fi (`ifdown --force` then `ifup` on the auto-detected wireless device) **only when there is already no LAN connectivity** (no default route, or the default gateway does not answer two checks ~5s apart). Because it acts only when the frame is already offline, it can never disturb a working connection or an SSH session. A raced cold boot now self-heals in roughly 60-90s instead of needing a power-cycle. Device-agnostic (it finds the Wi-Fi interface itself), so it serves the next owner's hardware too.
+
+Deliberately **not** done now: the full NetworkManager migration (which would bring autoconnect/retry natively). It is riskier to flip over a live SSH session and belongs to the later §11 setup-AP milestone; this watchdog is the safe interim fix and stays useful regardless. Tier-2 change (new systemd units under /etc), so an existing frame needs an `install.sh` re-run, not self-update alone; the kiosk is unaffected (no power-cycle needed). (Matt, 2026-06-17.)
 
 ### 2026-06-17: Control-panel Reboot hang fixed (reboot=pci)
 The Reboot button intermittently hung this MeLE N5105 / AMI board on the firmware POST splash (the Infinite Objects logo) and needed a cold unplug to recover, while Shut down was always fine. Root cause: the board's default reset method is ACPI (`/sys/kernel/reboot/type` read `acpi`, with mode already `cold`), and that ACPI reset intermittently fails to survive this firmware on a warm reboot. Fix: add `reboot=pci` to the kernel command line (the `DESIRED` string in install.sh §7), forcing the Intel 0xCF9 platform reset, the software equivalent of the power-cycle that already recovers the frame. Bench-verified 2026-06-17: tested live first via `/sys/kernel/reboot/type`, then persisted via GRUB, with clean reboots and no hang. Shut down (`poweroff`, ACPI S5) uses a separate path and is unaffected. Tier-2 change (writes /etc/default/grub + runs update-grub), so an existing frame needs an install.sh re-run, not just self-update; Matt's frame already has it applied manually. (Matt, 2026-06-17.)

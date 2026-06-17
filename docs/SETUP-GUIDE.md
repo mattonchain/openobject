@@ -194,6 +194,9 @@ the frame up about it.
 - For normal restarts, use the **Restart** button in the control panel.
 - If the control panel won't load, re-check that your device is on the same Wi-Fi as the frame, and
   try the **IP address** shown in the control panel instead of `openobject.local`.
+- If the frame ever **drops off Wi-Fi** (the art is still on screen but the control panel won't load
+  from any device), it now **re-joins on its own within about a minute**, so give it a moment before
+  reaching for the power. A power cycle still fixes it right away if you're in a hurry.
 - **To dig deeper, you can open a terminal (advanced, hands-on).** Plug a keyboard into the frame
   and press **Ctrl + Alt + F2** for a text login (use the username and password you set during
   install); **Ctrl + Alt + F1** returns to the art. Some keyboards treat the top row as media keys,
