@@ -198,8 +198,9 @@ the frame up about it.
   and press **Ctrl + Alt + F2** for a text login (use the username and password you set during
   install); **Ctrl + Alt + F1** returns to the art. Some keyboards treat the top row as media keys,
   so it may be **Ctrl + Alt + Fn + F2**. To work from another computer instead, OpenObject ships
-  with SSH installed but turned off; switch it on once with `sudo systemctl enable --now ssh`, then
-  connect to `openobject.local`.
+  with SSH turned on, so you can connect straight to `openobject.local` (log in with the username
+  and password you set during install). If you would rather keep it closed, turn it off with
+  `sudo systemctl disable --now ssh`.
 
 ---
 

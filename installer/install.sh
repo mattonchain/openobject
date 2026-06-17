@@ -67,11 +67,12 @@ ok "packages installed"
 apt-get install -y polkitd >/dev/null 2>&1 || apt-get install -y policykit-1 >/dev/null 2>&1 \
   || warn "polkit not installed; Reboot / Shut down may not work until it is"
 
-# SSH is installed for servicing but left OFF by default: a shipped frame opens no port until
-# its owner turns it on with `sudo systemctl enable --now ssh`. (Documented in the Setup Guide.)
-systemctl disable --now ssh.socket  >/dev/null 2>&1 || true
-systemctl disable --now ssh.service >/dev/null 2>&1 || true
-ok "openssh-server installed but disabled (enable: sudo systemctl enable --now ssh)"
+# SSH is installed and ON by default so a fresh frame is reachable from another computer for
+# servicing without a console trip. An owner who wants it closed runs
+# `sudo systemctl disable --now ssh`. (Documented in the Setup Guide.) Enabling is idempotent, so
+# re-running this installer (a Tier-2 step) never drops an SSH session it is run over.
+systemctl enable --now ssh >/dev/null 2>&1 || warn "could not enable ssh (try: sudo systemctl enable --now ssh)"
+ok "openssh-server installed and enabled (disable: sudo systemctl disable --now ssh)"
 
 # Console nicety: keep the text-console cursor on at each login. A stray control byte (e.g. from
 # dumping a binary file to the screen) can leave the Linux VT cursor hidden until something turns
