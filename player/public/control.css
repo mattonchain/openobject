@@ -446,3 +446,58 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .auth-fields { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin-top: 12px; }
 .auth-msg { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .login-box .auth-msg { color: var(--danger); }
+
+/* ── Connected artwork (experimental) ───────────────────────────────── */
+/* Entry point under the dropzone — its own thing, understated. */
+.add-connected {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin: 12px 0 18px; padding: 11px;   /* 18px below = standard gap before the library grid */
+  appearance: none; border: 1px solid #34474a; border-radius: 12px;
+  background: #12181a; color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+}
+.add-connected svg { color: #9fe1cb; }
+.add-connected:hover { border-color: #486066; background: #16201f; }
+.badge-connected { color: #9fe1cb; }   /* card badge for connected pieces */
+
+/* Add-connected modal */
+.cx-overlay { position: fixed; inset: 0; z-index: 60; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.6); padding: 22px; }
+.cx-overlay:not([hidden]) { display: flex; }
+.cx-box { width: min(440px, 100%); max-height: 90vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px 22px; }
+.cx-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cx-title { font-size: 16px; font-weight: 600; }
+.cx-close { appearance: none; border: 0; background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; padding: 4px 6px; }
+.cx-close:hover { color: var(--text); }
+.cx-collabel { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; margin: 4px 0 6px; }
+.cx-collections { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.cx-col { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); cursor: pointer; }
+.cx-col.sel { border-color: #2f5a3c; background: #13201a; }
+.cx-col-art { font-size: 14px; }
+.cx-col-sub { font-size: 12px; color: var(--muted); }
+.cx-col-check { margin-left: auto; color: #b6f0c2; opacity: 0; }
+.cx-col.sel .cx-col-check { opacity: 1; }
+.cx-result { display: flex; align-items: center; gap: 11px; margin-top: 13px; padding: 11px; border: 1px solid #2f5a3c; border-radius: 10px; background: #13201a; }
+.cx-result img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; flex: none; background: #000; }
+.cx-rtitle { font-size: 14px; }
+.cx-rsub { font-size: 12px; color: var(--muted); }
+.cx-msg { margin-top: 12px; font-size: 13px; color: var(--danger); }
+.cx-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+/* Connected Collections settings card */
+.cc-head { display: flex; align-items: center; justify-content: space-between; }
+.cc-unhide { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.cc-unhide:hover { color: var(--text); }
+.cc-list { margin-top: 6px; }
+.cc-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.cc-row.is-hidden { opacity: 0.5; }
+.cc-art { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex: none; background: #000; }
+.cc-meta { flex: 1; min-width: 0; }
+.cc-name { font-size: 14px; }
+.cc-sub { font-size: 12px; color: var(--muted); }
+.cc-animate { display: flex; align-items: center; gap: 8px; flex: none; color: var(--muted); font-size: 12px; }
+.cc-switch { appearance: none; width: 34px; height: 20px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); position: relative; cursor: pointer; flex: none; }
+.cc-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: left 0.12s, background 0.12s; }
+.cc-switch.on { background: #1c3a26; border-color: #2f5a3c; }
+.cc-switch.on::after { left: 16px; background: #b6f0c2; }
+.cc-hide { appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; flex: none; }
+.cc-hide:hover { color: var(--text); border-color: #4a4a52; }
+.cc-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }

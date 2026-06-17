@@ -42,6 +42,11 @@
         <p class="drop-title">Drag art here, or <span class="link">choose files</span></p>
         <p class="drop-sub">JPEG · PNG · GIF · AVIF · WebP · MP4 · MOV · WebM</p>
       </section>
+      <!-- Connected artwork (experimental): art hosted on the web / on-chain, added by Token ID. -->
+      <button type="button" id="addConnected" class="add-connected">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15l6-6"/><path d="M11 6l.5-.5a4.95 4.95 0 0 1 7 7l-.5.5"/><path d="M13 18l-.5.5a4.95 4.95 0 0 1-7-7l.5-.5"/></svg>
+        Add connected artwork
+      </button>
       <p id="status" class="status" hidden></p>
       <div id="grid" class="grid"></div>
       <p id="empty" class="empty" hidden>Nothing here yet — add some art above.</p>
@@ -87,6 +92,17 @@
           <span class="sleep-status" id="sleepStatus"></span>
         </div>
         <div class="sleep-ranges" id="sleepRanges"></div>
+      </section>
+
+      <!-- Connected Collections (experimental): the curated supported list; hide/unhide + animate.
+           Content-related, so it sits high in Settings, just under Sleep Hours. -->
+      <section class="device" id="connectedCard">
+        <div class="cc-head">
+          <span class="section-title">Connected Collections</span>
+          <button type="button" id="ccUnhideAll" class="cc-unhide" hidden>Unhide all</button>
+        </div>
+        <p class="device-note device-note-block">Connected Collections live on the web or on-chain.</p>
+        <div id="connectedList" class="cc-list"></div>
       </section>
 
       <!-- Software Update — pull the latest OpenObject from GitHub, all from the browser (HANDOFF §15) -->
@@ -159,6 +175,25 @@
       <button type="submit" class="update-btn primary" id="loginBtn">Unlock</button>
       <div class="auth-msg" id="authMsg" hidden></div>
     </form>
+  </div>
+
+  <!-- Add connected artwork (experimental): pick a supported collection, enter the Token ID. -->
+  <div id="cxOverlay" class="cx-overlay" hidden>
+    <div class="cx-box" role="dialog" aria-label="Add connected artwork">
+      <div class="cx-head">
+        <span class="cx-title">Add connected artwork</span>
+        <button type="button" class="cx-close" id="cxClose" aria-label="Close">✕</button>
+      </div>
+      <div class="cx-collabel">Collections</div>
+      <div id="cxCollections" class="cx-collections"></div>
+      <div class="cx-collabel">Token ID</div>
+      <input id="cxToken" class="auth-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Token ID">
+      <div id="cxResult" class="cx-result" hidden></div>
+      <div id="cxMsg" class="cx-msg" hidden></div>
+      <div class="cx-foot">
+        <button type="button" id="cxAdd" class="update-btn primary" disabled>Add to library</button>
+      </div>
+    </div>
   </div>
 
   <script src="/control.js"></script>

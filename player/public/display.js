@@ -26,7 +26,9 @@ let shuffleQueue = [];
 let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HANDOFF §13)
 let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
 
-const sig = (item) => item.fit + '|' + item.filename;
+const sig = (item) => item.kind === 'connected'
+  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0)
+  : item.fit + '|' + item.filename;
 const once = (fn) => {
   let done = false;
   return () => { if (!done) { done = true; fn(); } };
@@ -54,22 +56,30 @@ function pickNext() {
 
 function render(layer, item, onReady) {
   layer.className = 'layer fit-' + (item.fit === 'fill' ? 'fill' : 'fit');
-  const src = '/uploads/' + item.filename;
   let el;
-  if (item.kind === 'video') {
+  if (item.kind === 'connected') {
+    // Connected artwork: our same-origin mirror of the collection bundle. Pass the official URL's
+    // query string (carries the per-piece seed) plus the animate flag the bundle's hook reads.
+    el = document.createElement('iframe');
+    el.setAttribute('scrolling', 'no');
+    el.setAttribute('sandbox', 'allow-scripts allow-same-origin'); // runs scripts; can't navigate/popup
+    el.addEventListener('load', onReady, { once: true });
+    const q = item.source_url && item.source_url.includes('?') ? item.source_url.slice(item.source_url.indexOf('?')) : '';
+    el.src = '/collections/' + item.collection + '/index.html' + q + (item.animate ? '&ooanim=1' : '');
+  } else if (item.kind === 'video') {
     el = document.createElement('video');
     el.muted = true;          // silent art on a wall (§12)
     el.loop = true;           // loop to fill the duration
     el.playsInline = true;
     el.autoplay = true;
     el.addEventListener('loadeddata', onReady, { once: true });
-    el.src = src;
+    el.src = '/uploads/' + item.filename;
     el.play().catch(() => {});
   } else {
     el = document.createElement('img'); // stills + animated (GIF/WebP/AVIF) hold/loop
     el.addEventListener('load', onReady, { once: true });
     el.addEventListener('error', onReady, { once: true });
-    el.src = src;
+    el.src = '/uploads/' + item.filename;
   }
   layer.replaceChildren(el);
   setTimeout(onReady, 500); // fallback if the media event never fires

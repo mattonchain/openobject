@@ -53,6 +53,18 @@ const authPw = document.getElementById('authPw');
 const authMsg = document.getElementById('authMsg');
 const authCard = document.getElementById('authCard');
 
+// Connected artwork (experimental): entry button, add modal, and the Settings collections card.
+const addConnectedBtn = document.getElementById('addConnected');
+const cxOverlay = document.getElementById('cxOverlay');
+const cxClose = document.getElementById('cxClose');
+const cxCollections = document.getElementById('cxCollections');
+const cxToken = document.getElementById('cxToken');
+const cxResult = document.getElementById('cxResult');
+const cxMsg = document.getElementById('cxMsg');
+const cxAdd = document.getElementById('cxAdd');
+const connectedList = document.getElementById('connectedList');
+const ccUnhideAll = document.getElementById('ccUnhideAll');
+
 const UNIT_MS = { seconds: 1000, minutes: 60000, hours: 3600000 };
 
 // Inline icons (no webfont dependency — the frame runs offline).
@@ -69,6 +81,10 @@ let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓
 let sleepRanges = []; // up to two daily blank windows (HANDOFF §13)
 let manualBlank = false; // instant "Blank screen" override
 let runningCommit = null; // the commit this player reports — used to detect the restart
+let collectionsList = []; // supported connected collections (from /api/collections)
+let collectionsBySlug = {}; // slug → collection, for connected card subtitles
+let cxSlug = null; // collection selected in the add-connected modal
+let cxResolved = null; // last previewed { tokenId, title, image }
 
 const fmtBytes = (n) => {
   if (n < 1024) return n + ' B';
@@ -102,6 +118,12 @@ const mediaTag = (item) =>
     ? `<video src="/uploads/${item.filename}#t=0.1" muted playsinline preload="metadata"></video>`
     : `<img src="/uploads/${item.filename}" alt="" loading="lazy">`;
 
+// Connected pieces show their cached preview image; everything else shows its own media (§6).
+const thumbTag = (item) =>
+  item.kind === 'connected'
+    ? `<img src="${escapeHtml(item.thumb || '')}" alt="" loading="lazy">`
+    : mediaTag(item);
+
 // ── Library tab ─────────────────────────────────────────────────────
 function card(item) {
   const el = document.createElement('div');
@@ -109,10 +131,16 @@ function card(item) {
   const isFill = item.fit === 'fill';
   const isPinned = item.id === pinnedId;
   const inRot = !!item.in_rotation;
+  const connected = item.kind === 'connected';
+  // Connected pieces: a "Connected" badge instead of a format chip, artist as the subtitle, and
+  // no Fit/Fill (the square already fills the 1:1 frame). Otherwise a normal media card.
+  const badge = connected ? '<span class="badge badge-connected">Connected</span>' : `<span class="badge">${item.format}</span>`;
+  const sub = connected ? escapeHtml((collectionsBySlug[item.collection] || {}).artist || '') : fmtBytes(item.bytes);
+  const fitBtn = connected ? '' : `<button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>`;
   el.innerHTML = `
-    <div class="thumb fit-${isFill ? 'fill' : 'fit'}">
-      ${mediaTag(item)}
-      <span class="badge">${item.format}</span>
+    <div class="thumb fit-${!connected && isFill ? 'fill' : 'fit'}">
+      ${thumbTag(item)}
+      ${badge}
       <button class="rot-toggle${inRot ? ' on' : ''}" aria-pressed="${inRot}"
         aria-label="${inRot ? 'Remove from rotation' : 'Add to rotation'}"
         title="${inRot ? 'In the rotation — click to remove' : 'Add to the rotation'}">${inRot ? '✓' : '+'}</button>
@@ -120,16 +148,17 @@ function card(item) {
     </div>
     <div class="meta">
       <span class="name" title="${escapeHtml(item.original_name)}">${escapeHtml(item.original_name)}</span>
-      <span class="sub">${fmtBytes(item.bytes)}</span>
+      <span class="sub">${sub}</span>
     </div>
     <div class="actions">
       <button class="pin" aria-pressed="${isPinned}" title="Hold this piece on the screen permanently">${isPinned ? 'Pinned' : 'Pin'}</button>
-      <button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>
+      ${fitBtn}
       <button class="del">Delete</button>
     </div>`;
   el.querySelector('.rot-toggle').addEventListener('click', () => toggleRotation(item));
   el.querySelector('.pin').addEventListener('click', () => togglePin(item));
-  el.querySelector('.fit').addEventListener('click', () => toggleFit(item));
+  const fitEl = el.querySelector('.fit');
+  if (fitEl) fitEl.addEventListener('click', () => toggleFit(item));
   el.querySelector('.del').addEventListener('click', () => remove(item));
   return el;
 }
@@ -151,10 +180,10 @@ function rotRow(item, idx, total) {
   el.innerHTML = `
     <span class="rot-grip" title="Drag to reorder">${GRIP}</span>
     <span class="rot-num">${idx + 1}</span>
-    <span class="rot-thumb fit-${item.fit === 'fill' ? 'fill' : 'fit'}">${mediaTag(item)}</span>
+    <span class="rot-thumb fit-${item.fit === 'fill' ? 'fill' : 'fit'}">${thumbTag(item)}</span>
     <span class="rot-meta">
       <span class="rot-name">${isPinned ? '<span class="rot-pin" title="Pinned">📌</span> ' : ''}${escapeHtml(item.original_name)}</span>
-      <span class="rot-sub">${item.format}${item.fit === 'fill' ? ' · fill' : ''}</span>
+      <span class="rot-sub">${item.kind === 'connected' ? 'Connected' : item.format + (item.fit === 'fill' ? ' · fill' : '')}</span>
     </span>
     <span class="rot-btns">
       <button class="up" ${idx === 0 ? 'disabled' : ''} aria-label="Move earlier">${CHEV_UP}</button>
@@ -706,8 +735,135 @@ async function waitForRestart(before) {
 
 // loadSettings first (it sets pinnedId/mode the renderers read), then the two lists.
 async function refresh() {
-  await loadSettings();
+  // loadSettings sets pinnedId/mode and loadCollections fills collectionsBySlug — both are read
+  // by the library/rotation renderers, so they run first.
+  await Promise.all([loadSettings(), loadCollections()]);
   await Promise.all([loadLibrary(), loadRotation()]);
+}
+
+// ── Connected collections (experimental) ────────────────────────────
+async function loadCollections() {
+  try { collectionsList = await fetch('/api/collections').then((r) => r.json()); }
+  catch { collectionsList = []; }
+  collectionsBySlug = {};
+  collectionsList.forEach((c) => { collectionsBySlug[c.slug] = c; });
+  renderConnectedCard();
+}
+
+// Settings → Connected Collections: the supported list, each with Animate + Hide.
+function renderConnectedCard() {
+  ccUnhideAll.hidden = !collectionsList.some((c) => c.hidden);
+  if (!collectionsList.length) {
+    connectedList.innerHTML = '<p class="cc-empty">No connected collections are supported yet.</p>';
+    return;
+  }
+  connectedList.replaceChildren(...collectionsList.map((c) => {
+    const row = document.createElement('div');
+    row.className = 'cc-row' + (c.hidden ? ' is-hidden' : '');
+    row.innerHTML = `
+      <span class="cc-meta">
+        <span class="cc-name">${escapeHtml(c.name)}</span>
+        <span class="cc-sub">${escapeHtml(c.artist)} · ${c.pieces} piece${c.pieces === 1 ? '' : 's'}</span>
+      </span>
+      <span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>
+      <button class="cc-hide">${c.hidden ? 'Unhide' : 'Hide'}</button>`;
+    row.querySelector('.cc-switch').addEventListener('click', () => patchCollection(c.slug, { animate: !c.animate }));
+    row.querySelector('.cc-hide').addEventListener('click', () => patchCollection(c.slug, { hidden: !c.hidden }));
+    return row;
+  }));
+}
+
+async function patchCollection(slug, patch) {
+  await fetch(`/api/collections/${slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
+  await loadCollections();
+  await loadRotation(); // animate/visibility changes can affect the display + the rotation sub
+}
+
+async function unhideAll() {
+  for (const c of collectionsList) {
+    if (c.hidden) await fetch(`/api/collections/${c.slug}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hidden: false }) });
+  }
+  await loadCollections();
+}
+
+// The add modal: pick a collection, enter the Token ID, preview the derived piece, add it.
+function cxStatus(text, isError) {
+  cxMsg.textContent = text || '';
+  cxMsg.hidden = !text;
+  cxMsg.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+}
+
+function openConnected() {
+  cxSlug = null; cxResolved = null;
+  cxToken.value = '';
+  cxResult.hidden = true; cxStatus(''); cxAdd.disabled = true;
+  renderPicker();
+  cxOverlay.hidden = false;
+  setTimeout(() => cxToken.focus(), 0);
+}
+const closeConnected = () => { cxOverlay.hidden = true; };
+
+function renderPicker() {
+  const visible = collectionsList.filter((c) => !c.hidden);
+  if (!visible.length) {
+    cxCollections.innerHTML = '<p class="cc-empty">No collections available — unhide one in Settings.</p>';
+    cxAdd.disabled = true;
+    return;
+  }
+  if (!cxSlug || !visible.some((c) => c.slug === cxSlug)) cxSlug = visible[0].slug; // default-select first
+  cxCollections.replaceChildren(...visible.map((c) => {
+    const row = document.createElement('div');
+    row.className = 'cx-col' + (c.slug === cxSlug ? ' sel' : '');
+    row.innerHTML = `
+      <span style="flex:1;min-width:0">
+        <span class="cx-col-art" style="display:block">${escapeHtml(c.name)}</span>
+        <span class="cx-col-sub">${escapeHtml(c.artist)}</span>
+      </span>
+      <span class="cx-col-check">✓</span>`;
+    row.addEventListener('click', () => { cxSlug = c.slug; resetResolve(); renderPicker(); });
+    return row;
+  }));
+}
+
+function resetResolve() { cxResolved = null; cxResult.hidden = true; cxStatus(''); cxAdd.disabled = true; }
+
+async function previewToken() {
+  resetResolve();
+  const tokenId = cxToken.value.trim();
+  if (!cxSlug || !tokenId) return;
+  cxStatus('Looking up…');
+  let r, j;
+  try {
+    r = await fetch(`/api/collections/${cxSlug}/preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokenId }) });
+    j = await r.json().catch(() => ({}));
+  } catch { return cxStatus('Network error — try again.', true); }
+  if (!r.ok) return cxStatus(j.error || 'Could not find that piece.', true);
+  cxStatus('');
+  cxResolved = j;
+  const col = collectionsBySlug[cxSlug] || {};
+  cxResult.innerHTML =
+    (j.image ? `<img src="${escapeHtml(j.image)}" alt="">` : '') +
+    `<span style="flex:1;min-width:0">
+       <span class="cx-rtitle" style="display:block">${escapeHtml(j.title)}</span>
+       <span class="cx-rsub">${escapeHtml(col.artist || '')} · ${escapeHtml(col.name || '')}</span>
+     </span>`;
+  cxResult.hidden = false;
+  cxAdd.disabled = false;
+}
+
+async function addConnected() {
+  if (!cxSlug || !cxResolved) return;
+  cxAdd.disabled = true;
+  cxStatus('Adding…');
+  let r, j;
+  try {
+    r = await fetch(`/api/collections/${cxSlug}/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokenId: cxResolved.tokenId }) });
+    j = await r.json().catch(() => ({}));
+  } catch { cxAdd.disabled = false; return cxStatus('Network error — try again.', true); }
+  if (!r.ok) { cxAdd.disabled = false; return cxStatus(j.error || 'Could not add the piece.', true); }
+  closeConnected();
+  switchTab('library');
+  await refresh();
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────
@@ -764,6 +920,15 @@ fileInput.addEventListener('change', () => { send(fileInput.files); fileInput.va
   drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('drag'); })
 );
 drop.addEventListener('drop', (e) => send(e.dataTransfer.files));
+
+// Connected artwork (experimental): entry button → modal; Token ID resolves on change/Enter.
+addConnectedBtn.addEventListener('click', openConnected);
+cxClose.addEventListener('click', closeConnected);
+cxOverlay.addEventListener('click', (e) => { if (e.target === cxOverlay) closeConnected(); });
+cxToken.addEventListener('change', previewToken);
+cxToken.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); previewToken(); } });
+cxAdd.addEventListener('click', addConnected);
+ccUnhideAll.addEventListener('click', unhideAll);
 
 // ── Optional password (HANDOFF §10) ─────────────────────────────────
 // Off by default. /api/auth/status reports whether a password is set and whether this browser is

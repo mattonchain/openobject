@@ -77,6 +77,24 @@ function initDb() {
     db.exec('UPDATE library SET position = id WHERE position IS NULL');
   }
 
+  // Connected artwork (experimental, src/collections.js): a Library row whose source is a
+  // hosted/on-chain URL rather than an uploaded file. kind='connected'; the official artwork URL
+  // is stored verbatim in source_url, with a derived title (original_name) and cached thumbnail so
+  // the card looks like any other piece. Columns added in place so older libraries upgrade cleanly.
+  for (const col of ['source_url', 'collection', 'token_id', 'thumb']) {
+    if (!cols.has(col)) db.exec(`ALTER TABLE library ADD COLUMN ${col} TEXT`);
+  }
+
+  // Per-frame curation of the supported collections list (the registry itself lives in code):
+  // hidden = don't show when adding; animate = override the collection's animate-on-load default.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collection_state (
+      slug    TEXT PRIMARY KEY,
+      hidden  INTEGER NOT NULL DEFAULT 0,
+      animate INTEGER                       -- NULL = use the registry default
+    );
+  `);
+
   console.log(`SQLite ready (node:sqlite) → ${DB_PATH}`);
   return db;
 }
@@ -115,6 +133,42 @@ function addLibraryItem(item) {
       item.height ?? null
     );
   return getLibraryItem(Number(info.lastInsertRowid));
+}
+
+// Connected artwork: a Library row sourced from a hosted/on-chain URL (no uploaded file).
+// filename is a synthetic unique key (so the same piece can't be added twice); bytes is 0.
+function addConnectedItem(item) {
+  const info = getDb()
+    .prepare(
+      `INSERT INTO library (filename, original_name, mime, format, kind, bytes, in_rotation, position, source_url, collection, token_id, thumb)
+       VALUES (?, ?, 'text/html', 'connected', 'connected', 0, 1, (SELECT COALESCE(MAX(position), -1) + 1 FROM library WHERE in_rotation = 1), ?, ?, ?, ?)`
+    )
+    .run(item.filename, item.title, item.source_url, item.collection, item.token_id, item.thumb ?? null);
+  return getLibraryItem(Number(info.lastInsertRowid));
+}
+
+function getLibraryItemByFilename(filename) {
+  return getDb().prepare('SELECT * FROM library WHERE filename = ?').get(filename) || null;
+}
+
+function countConnected(slug) {
+  return getDb().prepare("SELECT COUNT(*) AS n FROM library WHERE kind = 'connected' AND collection = ?").get(slug).n;
+}
+
+// ── Connected-collection curation state (hidden / animate override) ──
+function getCollectionState(slug) {
+  return getDb().prepare('SELECT slug, hidden, animate FROM collection_state WHERE slug = ?').get(slug) || null;
+}
+function setCollectionState(slug, patch) {
+  const cur = getCollectionState(slug) || { hidden: 0, animate: null };
+  const hidden = patch.hidden !== undefined ? (patch.hidden ? 1 : 0) : cur.hidden;
+  const animate = patch.animate !== undefined ? (patch.animate ? 1 : 0) : cur.animate;
+  getDb()
+    .prepare(
+      `INSERT INTO collection_state (slug, hidden, animate) VALUES (?, ?, ?)
+       ON CONFLICT(slug) DO UPDATE SET hidden = excluded.hidden, animate = excluded.animate`
+    )
+    .run(slug, hidden, animate);
 }
 
 // Library grid shows newest first; the Rotation is the curated subset in its chosen order.
@@ -182,6 +236,11 @@ module.exports = {
   getSetting,
   setSetting,
   addLibraryItem,
+  addConnectedItem,
+  getLibraryItemByFilename,
+  countConnected,
+  getCollectionState,
+  setCollectionState,
   listLibrary,
   listRotation,
   getLibraryItem,

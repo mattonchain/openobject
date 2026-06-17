@@ -18,6 +18,7 @@ const multer = require('multer');
 const db = require('./src/db');
 const { classify } = require('./src/formats');
 const updater = require('./src/updater');
+const collections = require('./src/collections');
 const RESTART_CODE = require('./src/restart-code');
 
 // Set by the supervisor (HANDOFF §15). When supervised, the player may exit to auto-relaunch
@@ -66,7 +67,10 @@ app.disable('x-powered-by');
 // Content-Security-Policy: defense-in-depth for the control panel. Scripts and styles are
 // external same-origin files and media is served from /uploads and /assets, so a strict
 // policy costs nothing here and blocks injected inline script (e.g. via an uploaded filename).
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
+  // Mirrored connected-art bundles under /collections get their own policy (below): vetted
+  // third-party art needs inline script/handlers and must be frameable by the same-origin display.
+  if (req.path.startsWith('/collections/')) return next();
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; img-src 'self' data:; media-src 'self'; script-src 'self'; " +
     "style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
@@ -79,6 +83,17 @@ app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 app.use('/assets', express.static(ASSETS_DIR));
 app.use('/uploads', express.static(db.UPLOADS_DIR));
+
+// Mirrored connected-art bundles (experimental, src/collections.js). Served same-origin so the
+// art runs and the display can frame it; locked to our own resources, just allowing the inline
+// script/handlers these p5 sketches use. Stays open with a password set (it's kiosk content).
+app.use('/collections', (_req, res, next) => {
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; " +
+    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; " +
+    "object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  next();
+}, express.static(collections.COLLECTIONS_DIR));
 
 // ── Optional control-panel password (HANDOFF §10) ───────────────────
 // OFF BY DEFAULT: with no password set, authRequired() is false and authGate is a no-op, so the
@@ -271,9 +286,56 @@ app.delete('/api/library/:id', (req, res) => {
   const row = db.deleteLibraryItem(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'not found' });
   if (Number(db.getSetting('pinned_id', '')) === row.id) db.setSetting('pinned_id', ''); // drop a stale pin
-  fs.rm(path.join(db.UPLOADS_DIR, row.filename), { force: true }, () => {}); // best-effort file removal
+  if (row.kind === 'connected') {
+    // Drop the cached thumbnail; leave the shared bundle in place (other pieces may use it).
+    if (row.thumb && row.thumb.startsWith('/collections/')) {
+      fs.rm(path.join(collections.COLLECTIONS_DIR, row.thumb.replace('/collections/', '')), { force: true }, () => {});
+    }
+  } else {
+    fs.rm(path.join(db.UPLOADS_DIR, row.filename), { force: true }, () => {}); // best-effort file removal
+  }
   res.json({ deleted: row.id });
 });
+
+// ── Connected collections (experimental, src/collections.js) ─────────
+// The supported list is code; the owner curates which show (hide/unhide) and toggles animate.
+app.get('/api/collections', (_req, res) => res.json(collections.list()));
+
+app.patch('/api/collections/:slug', (req, res) => {
+  const { hidden, animate } = req.body || {};
+  if (hidden === undefined && animate === undefined) return res.status(400).json({ error: 'nothing to update' });
+  if ((hidden !== undefined && typeof hidden !== 'boolean') || (animate !== undefined && typeof animate !== 'boolean')) {
+    return res.status(400).json({ error: 'hidden/animate must be booleans' });
+  }
+  if (!collections.bySlug(req.params.slug)) return res.status(404).json({ error: 'unknown collection' });
+  res.json(collections.setState(req.params.slug, { hidden, animate }));
+});
+
+// Resolve a Token ID to its title + preview WITHOUT adding (drives the add-flow preview).
+app.post('/api/collections/:slug/preview', ah(async (req, res) => {
+  if (!collections.bySlug(req.params.slug)) return res.status(404).json({ error: 'unknown collection' });
+  try {
+    const info = await collections.resolveToken(req.params.slug, (req.body || {}).tokenId);
+    // Return the preview as a data URL so it renders under the control panel's strict CSP.
+    res.json({ tokenId: info.tokenId, title: info.title, image: await collections.toDataUrl(info.image) });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+}));
+
+// Add a piece: re-resolve on the server (authoritative), store the OFFICIAL url verbatim, mirror
+// the shared bundle once, cache the thumbnail, then it's a normal Library row.
+app.post('/api/collections/:slug/add', ah(async (req, res) => {
+  const c = collections.bySlug(req.params.slug);
+  if (!c) return res.status(404).json({ error: 'unknown collection' });
+  let info;
+  try { info = await collections.resolveToken(c.slug, (req.body || {}).tokenId); }
+  catch (e) { return res.status(400).json({ error: e.message }); }
+  const filename = `oo-connected-${c.slug}-${info.tokenId}`;
+  if (db.getLibraryItemByFilename(filename)) return res.status(409).json({ error: 'That piece is already in your library.' });
+  try { await collections.mirrorBundle(c.slug, info.sourceUrl); }
+  catch (e) { return res.status(502).json({ error: 'Could not download the artwork: ' + e.message }); }
+  const thumb = await collections.cacheThumb(c.slug, info.tokenId, info.image);
+  res.json(db.addConnectedItem({ filename, title: info.title, source_url: info.sourceUrl, collection: c.slug, token_id: info.tokenId, thumb }));
+}));
 
 // ── Rotation curation (HANDOFF §7) — membership rides on the library row; order is its own call ──
 app.get('/api/rotation', (_req, res) => {
@@ -363,11 +425,19 @@ app.delete('/api/pin', (_req, res) => {
 // What the display plays: while asleep (a sleep window or manual Blank, §13) it serves
 // `asleep:true` and the display shows the dimmed mark. Otherwise a pinned piece overrides
 // everything — held permanently even if not in the Rotation (§7) — else the Rotation in order.
+// Connected pieces carry their collection's current animate-on-load setting so the display
+// knows whether to fire the bundle's animate hook.
+const withConnectedFlags = (item) => {
+  if (item.kind !== 'connected') return item;
+  const st = collections.getState(item.collection);
+  return { ...item, animate: st ? st.animate : false };
+};
+
 app.get('/api/display', (_req, res) => {
   const settings = currentSettings();
   const pinned = settings.pinnedId != null ? db.getLibraryItem(settings.pinnedId) : null;
   res.json({
-    items: pinned ? [pinned] : db.listRotation(),
+    items: (pinned ? [pinned] : db.listRotation()).map(withConnectedFlags),
     durationMs: settings.durationMs,
     mode: settings.mode,
     pinnedId: settings.pinnedId,

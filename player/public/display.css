@@ -51,6 +51,16 @@ body {
   background: var(--stage-bg);      /* letterbox is bare black stage, NOT a frame (§6) */
 }
 
+/* Connected artwork renders in a same-origin iframe that fills the stage; the art sizes itself
+   to the square panel. No object-fit (it's a document, not a media element). */
+.layer iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  background: var(--stage-bg);
+}
+
 /* Fit = whole piece, original aspect, black fills the rest. Fill = cover, center-crop. */
 .fit-fit  img, .fit-fit  video { object-fit: contain; }
 .fit-fill img, .fit-fill video { object-fit: cover; object-position: center; }
