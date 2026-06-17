@@ -281,7 +281,7 @@ photos never enter the repo, §8). Build none of this in Phase 1.
 
 | Setting | v1 default | Notes |
 |---|---|---|
-| Audio | **Muted, always** | Silent art on a wall. Future: optional global "allow audio" toggle. |
+| Audio | **Muted, always** | Silent art on a wall. The frame has no speaker, and muted is the intent regardless. |
 | Control-panel access | **Open on LAN**, optional password (built 2026-06-16) | Off by default (no login friction). When set in Settings it gates the control panel + every mutating API; the kiosk display stays open. HMAC-signed httpOnly cookie session, scrypt-hashed password, no new dependency. |
 | Idle / empty screen | **Branded card**, not black | Shows OpenObject mark + "add art at openobject.local". Takes a **logo asset** (Matt-supplied) so the mark drops in without redesign. |
 | Display name / mDNS | `openobject.local` | IP fallback shown on setup page. |
@@ -470,8 +470,6 @@ Maintain **two** living documents as the build proceeds, not one written once an
   plays; this renders a *live page*). **Status: BUILT 2026-06-16** as Connected Collections (§8, §20). What shipped: the curated registry, add-by-Token-ID with on-chain `tokenURI` resolution to the official URL, a local mirror, the `connected` render kind in a sandboxed same-origin iframe, and per-collection Animate + Hide/Unhide. The earlier cross-origin / kiosk-only concern was solved by **mirroring + serving same-origin and injecting the animate hook**, so it runs in Phase 1, not only on the kiosk. **Still future:** a general "paste any hosted URL and name it yourself" path for non-registry pieces (the data model already allows it, with the collection left empty).
 - **Adjustable crop position** for Fill (e.g. keep the top of portraits). v1 is center-crop only.
 - **SVG support.** Trivial to add under the browser-render approach if wanted later; deferred because it renders unpredictably at arbitrary sizes.
-- **Global "allow audio" toggle.** v1 is muted-always.
-- **Smart-plug integration** for hard-lockout recovery.
 
 ---
 
@@ -504,6 +502,11 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-17: Pruned §17 future enhancements (allow-audio, smart-plug)
+- Removed the global "allow audio" toggle. The frame has no speaker; adding one (e.g. a USB speaker) is possible but would break the original intention of silent art on a wall. Audio stays **muted, always**, by design, not as a deferred limitation. Updated the §12 Audio row to match.
+- Removed the **smart-plug integration** item. Remote power-cycling via an optional smart plug is already documented as an owner choice in §10 (hard-lockup recovery becomes a phone tap, not required), so it does not need to live here as a feature to build.
+- (Matt, 2026-06-17.)
 
 ### 2026-06-16: Connected Collections (experimental web/on-chain art) built and verified on the frame
 Realizes the §17 "web / HTML art pieces" seam, opt-in and off the default path (normal uploads, rotation, and display are unchanged). First supported collection: Bryan Brinkman's *"Azulejo Galo"* (a p5.js sketch on Arweave).
