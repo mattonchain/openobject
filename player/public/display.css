@@ -61,6 +61,21 @@ body {
   background: var(--stage-bg);
 }
 
+/* Crop: a collection whose art is composed in a centered inset (e.g. send/receive's sprite card
+   fills the middle 60%) is zoomed so the art reaches the panel edges, no black border (HANDOFF §6).
+   The iframe is oversized to --crop-scale (= 100/fraction, so 0.6 -> 166.667%) and centered, so the
+   generator renders the art larger and crisp; the layer clips the overflow. --crop-scale is set per
+   piece in display.js. */
+.layer.crop { overflow: hidden; }
+.layer.crop iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--crop-scale);
+  height: var(--crop-scale);
+  transform: translate(-50%, -50%);
+}
+
 /* Fit = whole piece, original aspect, black fills the rest. Fill = cover, center-crop. */
 .fit-fit  img, .fit-fit  video { object-fit: contain; }
 .fit-fill img, .fit-fill video { object-fit: cover; object-position: center; }

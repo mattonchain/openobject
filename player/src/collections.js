@@ -42,6 +42,33 @@ const REGISTRY = [
     animateDefault: false,
     animatable: false,
   },
+  {
+    slug: 'send-receive',
+    artist: 'Snowfro',
+    name: 'send/receive',
+    chain: 'Ethereum',
+    contract: '0xababababab20053426ad1c782de9ea8444358070',
+    rpc: 'https://ethereum-rpc.publicnode.com',
+    // A LIVE, networked artwork (Art Blocks Flex on-chain). Unlike the self-contained pieces above,
+    // each token's generator HTML reads the global on-chain state of the whole collection at display
+    // time (block by block, the send/receive balance across all tokens) and animates from it. So:
+    //  • perToken: the generator returns a different fully-inlined HTML per token (token id in the
+    //    path, no query seed), so each token gets its own mirrored bundle, not a shared one.
+    //  • liveRpc: the piece needs a reachable Ethereum RPC to animate. We override its embedded
+    //    endpoint with our own swappable public node (display.js appends ?rpc_url=) and scope a
+    //    connect-src exception to just this collection's bundle path (server.js). Offline it falls
+    //    back to a static sprite with the artist's own network-error badge, so this is the one
+    //    collection that is not fully offline. It self-animates with live data, so no Animate toggle.
+    perToken: true,
+    liveRpc: true,
+    animateDefault: false,
+    animatable: false,
+    // The generator composes the artwork in the centered 60% of the panel with a 20% black margin
+    // on every side. We want it edge to edge (HANDOFF §6, no border), so the display zooms the iframe
+    // to crop that margin out. `crop` is the centered fraction the art occupies; 0.6 -> 1/0.6 zoom.
+    // Measured off the static "white version" of the sprite card, constant across this collection.
+    crop: 0.6,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
@@ -94,7 +121,28 @@ async function resolveToken(slug, tokenId) {
 // ── Mirror the shared render bundle once, served same-origin (server CSP allows it to run and
 // be framed by the display). Lets us inject the auto-animate hook and play with no network later. ──
 function bundleDir(slug) { return path.join(COLLECTIONS_DIR, slug); }
-function isMirrored(slug) { return fs.existsSync(path.join(bundleDir(slug), 'index.html')); }
+
+// Where a piece's bundle lives. Most collections share one bundle for the whole collection (the
+// per-piece seed rides in the source URL's query string). `perToken` collections (Art Blocks-style)
+// return a different fully-inlined HTML per token, so each token gets its own dir under the slug.
+function outDir(slug, tokenId) {
+  const c = bySlug(slug);
+  return c && c.perToken ? path.join(bundleDir(slug), String(tokenId)) : bundleDir(slug);
+}
+function isMirrored(slug, tokenId) { return fs.existsSync(path.join(outDir(slug, tokenId), 'index.html')); }
+
+// Live (networked) collections read a public RPC at display time (e.g. send/receive reads the
+// global on-chain state that drives its animation). We scope a connect-src exception to just that
+// collection's bundle path; every other collection stays locked to same-origin. Given a request
+// path under /collections (e.g. "/send-receive/5008760/index.html"), return the RPC origin to
+// allow, or null. The artwork's embedded endpoint is overridden at render time with our own
+// swappable public node, so only this one origin needs allowing (no reliance on the embedded key).
+function liveRpcForPath(reqPath) {
+  const seg = decodeURIComponent(String(reqPath || '').replace(/^\/+/, '').split('/')[0] || '');
+  const c = bySlug(seg);
+  if (!c || !c.liveRpc) return null;
+  try { return new URL(c.rpc).origin; } catch { return null; }
+}
 
 // Injected into the mirrored index.html: when the iframe is opened with ?ooanim=1, wait until the
 // sketch has generated, then fire its global animate function ONCE (Azulejo: toggleRotation).
@@ -123,9 +171,12 @@ async function fetchBuf(url) {
   return Buffer.from(await r.arrayBuffer());
 }
 
-// Fetch the entry HTML + every relative asset it references (scripts, etc.), inject the hook.
-async function mirrorBundle(slug, sourceUrl) {
-  if (isMirrored(slug)) return;
+// Fetch the entry HTML + every relative asset it references (scripts, etc.). For collections that
+// expose an Animate control, inject the auto-animate hook; self-animating pieces are left verbatim.
+async function mirrorBundle(slug, sourceUrl, tokenId) {
+  const c = bySlug(slug);
+  const out = outDir(slug, tokenId);                                         // per-token dir, or the shared bundle
+  if (fs.existsSync(path.join(out, 'index.html'))) return;                   // already mirrored
   const u = new URL(toHttp(sourceUrl));                                      // ipfs:// → gateway for the fetch
   const dir = u.pathname.slice(0, u.pathname.lastIndexOf('/') + 1);          // .../<txid>/
   const base = u.origin + dir;
@@ -143,16 +194,26 @@ async function mirrorBundle(slug, sourceUrl) {
     if (/^(https?:)?\/\//i.test(ref) || ref.startsWith('data:') || ref.startsWith('#')) continue;
     assets.add(ref.replace(/^\.?\//, ''));
   }
-  const out = bundleDir(slug);
   for (const rel of assets) {
     const buf = await fetchBuf(base + rel);
     const dest = path.join(out, rel);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, buf);
   }
-  html = html.includes('</body>') ? html.replace('</body>', ANIMATE_HOOK + '\n</body>') : html + ANIMATE_HOOK;
+  // Only collections with an Animate control (e.g. Azulejo's toggleRotation) get the hook. Pieces
+  // that animate on their own (Kittoe's time-still, send/receive's live render) stay verbatim.
+  if (c && c.animatable !== false) {
+    html = html.includes('</body>') ? html.replace('</body>', ANIMATE_HOOK + '\n</body>') : html + ANIMATE_HOOK;
+  }
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'index.html'), html, 'utf8');
+}
+
+// Remove a piece's mirrored bundle. perToken collections give each token its own bundle, so it is
+// safe to delete on removal; shared-bundle collections keep theirs (other pieces may still use it).
+function removeBundle(slug, tokenId) {
+  const c = bySlug(slug);
+  if (c && c.perToken) fs.rm(path.join(bundleDir(slug), String(tokenId)), { recursive: true, force: true }, () => {});
 }
 
 // Cache the preview image locally so the Library card has an offline thumbnail.
@@ -205,4 +266,4 @@ function list() {
     .sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
 }
 
-module.exports = { REGISTRY, COLLECTIONS_DIR, bySlug, resolveToken, mirrorBundle, cacheThumb, toDataUrl, getState, setState, list, isMirrored };
+module.exports = { REGISTRY, COLLECTIONS_DIR, bySlug, resolveToken, mirrorBundle, removeBundle, cacheThumb, toDataUrl, getState, setState, list, isMirrored, liveRpcForPath };

@@ -27,7 +27,7 @@ let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HA
 let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
 
 const sig = (item) => item.kind === 'connected'
-  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0)
+  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0) + '|' + (item.rpcUrl || '')
   : item.fit + '|' + item.filename;
 const once = (fn) => {
   let done = false;
@@ -58,14 +58,29 @@ function render(layer, item, onReady) {
   layer.className = 'layer fit-' + (item.fit === 'fill' ? 'fill' : 'fit');
   let el;
   if (item.kind === 'connected') {
-    // Connected artwork: our same-origin mirror of the collection bundle. Pass the official URL's
-    // query string (carries the per-piece seed) plus the animate flag the bundle's hook reads.
+    // Connected artwork: our same-origin mirror of the collection bundle. A shared-bundle collection
+    // carries its per-piece seed in the official URL's query string; a perToken collection (Art
+    // Blocks-style) has its own bundle dir per token. We also append rpc_url for live collections (so
+    // the piece reads on-chain state from our node) and ooanim for collections with an animate hook.
     el = document.createElement('iframe');
     el.setAttribute('scrolling', 'no');
     el.setAttribute('sandbox', 'allow-scripts allow-same-origin'); // runs scripts; can't navigate/popup
     el.addEventListener('load', onReady, { once: true });
-    const q = item.source_url && item.source_url.includes('?') ? item.source_url.slice(item.source_url.indexOf('?')) : '';
-    el.src = '/collections/' + item.collection + '/index.html' + q + (item.animate ? '&ooanim=1' : '');
+    const params = [];
+    const qIdx = item.source_url ? item.source_url.indexOf('?') : -1;
+    if (qIdx >= 0) params.push(item.source_url.slice(qIdx + 1));         // per-piece seed (shared bundles)
+    if (item.rpcUrl) params.push('rpc_url=' + encodeURIComponent(item.rpcUrl)); // live RPC override
+    if (item.animate) params.push('ooanim=1');                          // fire the bundle's animate hook
+    const tokenSeg = item.perToken && item.token_id != null ? '/' + encodeURIComponent(item.token_id) : '';
+    el.src = '/collections/' + item.collection + tokenSeg + '/index.html' + (params.length ? '?' + params.join('&') : '');
+    // Some collections compose the art in a centered inset with a black margin (e.g. send/receive's
+    // sprite card fills the middle 60%). `crop` zooms the iframe so the art reaches the panel edges
+    // (HANDOFF §6). Oversizing the iframe (not CSS-scaling) keeps the generator rendering at full
+    // resolution, so pixel art stays crisp; the layer clips the overflow (display.css .layer.crop).
+    if (item.crop && item.crop > 0 && item.crop < 1) {
+      layer.classList.add('crop');
+      el.style.setProperty('--crop-scale', (100 / item.crop).toFixed(3) + '%');
+    }
   } else if (item.kind === 'video') {
     el = document.createElement('video');
     el.muted = true;          // silent art on a wall (§12)

@@ -141,7 +141,10 @@ piece's **Token ID** (the number on the piece's page, for example OpenSea shows 
 OpenObject looks up the real artwork, downloads it to the frame so it plays offline, and adds it as a
 normal piece you can put in the Rotation or Pin like any other. Some connected pieces even change
 through the day on their own, for example one shifts from daytime colors to moonlit tones at night,
-following your frame's local time. The supported collections live in the **Settings** tab, under
+following your frame's local time. Another, Snowfro's *send/receive*, is a living piece that reads
+its art network over the internet and animates non-stop, filling the whole panel edge to edge;
+because it's live, this one looks its best when the frame is online (the others play fully offline
+once they're added). The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
 their motion on or off (**Animate**). This is new and **curated**: only collections that have been
 specifically added will work, so it won't read just any link yet.

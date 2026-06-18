@@ -90,11 +90,15 @@ app.use('/uploads', express.static(db.UPLOADS_DIR));
 // connect-src includes data:/blob: because p5's loadImage() fetches images these sketches build in
 // memory as data: URLs (e.g. Azulejo's print-sheet fold diagram, used only by its export menu).
 // Without it that fetch is blocked: harmless to the displayed art, but it spams the console with a
-// "Failed to fetch" on every load. Still no remote origins (no phoning home).
-app.use('/collections', (_req, res, next) => {
+// "Failed to fetch" on every load. No remote origins by default (no phoning home), with ONE narrow
+// exception: a `liveRpc` collection (e.g. send/receive) reads live on-chain state to animate, so its
+// own bundle path is allowed to connect to a single public Ethereum node (scoped per collection).
+app.use('/collections', (req, res, next) => {
+  const rpcOrigin = collections.liveRpcForPath(req.path); // non-null only for a liveRpc collection's path
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; " +
-    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' data: blob:; " +
+    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
+    `connect-src 'self' data: blob:${rpcOrigin ? ' ' + rpcOrigin : ''}; ` +
     "object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
   next();
 }, express.static(collections.COLLECTIONS_DIR));
@@ -291,10 +295,12 @@ app.delete('/api/library/:id', (req, res) => {
   if (!row) return res.status(404).json({ error: 'not found' });
   if (Number(db.getSetting('pinned_id', '')) === row.id) db.setSetting('pinned_id', ''); // drop a stale pin
   if (row.kind === 'connected') {
-    // Drop the cached thumbnail; leave the shared bundle in place (other pieces may use it).
+    // Drop the cached thumbnail. A shared bundle stays (other pieces may use it); a per-token
+    // bundle is this piece's alone, so removeBundle reclaims it.
     if (row.thumb && row.thumb.startsWith('/collections/')) {
       fs.rm(path.join(collections.COLLECTIONS_DIR, row.thumb.replace('/collections/', '')), { force: true }, () => {});
     }
+    collections.removeBundle(row.collection, row.token_id);
   } else {
     fs.rm(path.join(db.UPLOADS_DIR, row.filename), { force: true }, () => {}); // best-effort file removal
   }
@@ -335,7 +341,7 @@ app.post('/api/collections/:slug/add', ah(async (req, res) => {
   catch (e) { return res.status(400).json({ error: e.message }); }
   const filename = `oo-connected-${c.slug}-${info.tokenId}`;
   if (db.getLibraryItemByFilename(filename)) return res.status(409).json({ error: 'That piece is already in your library.' });
-  try { await collections.mirrorBundle(c.slug, info.sourceUrl); }
+  try { await collections.mirrorBundle(c.slug, info.sourceUrl, info.tokenId); }
   catch (e) { return res.status(502).json({ error: 'Could not download the artwork: ' + e.message }); }
   const thumb = await collections.cacheThumb(c.slug, info.tokenId, info.image);
   res.json(db.addConnectedItem({ filename, title: info.title, source_url: info.sourceUrl, collection: c.slug, token_id: info.tokenId, thumb }));
@@ -429,12 +435,21 @@ app.delete('/api/pin', (_req, res) => {
 // What the display plays: while asleep (a sleep window or manual Blank, §13) it serves
 // `asleep:true` and the display shows the dimmed mark. Otherwise a pinned piece overrides
 // everything — held permanently even if not in the Rotation (§7) — else the Rotation in order.
-// Connected pieces carry their collection's current animate-on-load setting so the display
-// knows whether to fire the bundle's animate hook.
+// Connected pieces carry their collection's current animate-on-load setting so the display knows
+// whether to fire the bundle's animate hook, plus how to build the iframe src: `perToken` (per-token
+// bundle path vs the shared one) and `rpcUrl` (a liveRpc collection's swappable public node, which
+// the display appends as the piece's ?rpc_url override so it animates from live on-chain state).
 const withConnectedFlags = (item) => {
   if (item.kind !== 'connected') return item;
+  const c = collections.bySlug(item.collection);
   const st = collections.getState(item.collection);
-  return { ...item, animate: st ? st.animate : false };
+  return {
+    ...item,
+    animate: st ? st.animate : false,
+    perToken: !!(c && c.perToken),
+    rpcUrl: c && c.liveRpc ? c.rpc : null,
+    crop: c && c.crop ? c.crop : null, // art occupies this centered fraction; display zooms it edge to edge
+  };
 };
 
 app.get('/api/display', (_req, res) => {
