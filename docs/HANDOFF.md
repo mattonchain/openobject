@@ -409,6 +409,27 @@ and reports gracefully rather than hanging); making the repo public is the one-s
 The bench unit is **seeded from a `git bundle`** of the local repo (private repo → no clone
 auth needed; full history preserved so self-update works once public).
 
+### Servicing the installed frame (Phase 2)
+
+**What a self-update can ship: Tier 1 vs Tier 2.** Self-update (and a plain Restart) only
+fast-forwards the `/opt/openobject` git checkout and relaunches the player, so changes split into
+two tiers:
+
+- **Tier 1 (rides self-update):** anything that is a file in the checkout. The player code, the
+  kiosk scripts under `installer/kiosk/`, the cursor theme. These reach the frame with a normal
+  *Check for updates -> Update & Restart*. Caveat: display or kiosk-launcher changes also need a
+  **cold power-cycle** to reload Chromium/cage (a player restart does not reload the kiosk page).
+- **Tier 2 (does NOT ride self-update):** anything outside the checkout. systemd unit files
+  (installed under `/etc`), apt packages, polkit rules, the kernel command line. These need the
+  provisioner re-run: `sudo bash /opt/openobject/installer/install.sh` (idempotent). When a change
+  is Tier 2, call it out, otherwise a self-update alone silently no-ops it.
+
+**Console access at the panel.** If the kiosk ever needs a shell at the frame itself, switch to a
+virtual terminal with **`Ctrl+Alt+Fn+F2`** and return to the art with **`Ctrl+Alt+F1`**. Both
+halves of the chord matter: cage is launched with `-s` so VT switching is allowed, and on a compact
+keyboard whose top row are media keys (e.g. the Logitech K400) the function keys need the **Fn** key
+(hence Ctrl+Alt+Fn+F2). SSH is the other door and is on by default (see the 2026-06-17 §20 entry).
+
 ---
 
 ## 16. Documentation requirement (two audiences, kept in lockstep)
@@ -507,6 +528,13 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-18: Documented frame serviceability (Tier-1/2 update model + console access) in §15
+Promoted two operating facts that were only in working notes into the spec, under §15 "Servicing
+the installed frame": the Tier-1 (rides self-update) vs Tier-2 (needs an `install.sh` re-run) split
+for what a self-update can actually ship, and the `Ctrl+Alt+Fn+F2` console chord (cage `-s` + the
+Fn key on a media-key keyboard) with `Ctrl+Alt+F1` back to the art. Doc-only; engineering audience,
+so no SETUP-GUIDE change.
 
 ### 2026-06-18: Third connected collection (Snowfro, "send/receive") + live on-chain art
 Added the third supported Connected Collection (§8): Snowfro's *"send/receive"* (Art Blocks Flex on-chain, Ethereum contract `0xababababab20053426ad1c782de9ea8444358070`). It is the first **live/networked** piece: each token's generator reads the collection's global on-chain state (the send/receive balance across all tokens, block by block) and animates from it. Three additive changes:
