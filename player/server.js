@@ -87,10 +87,14 @@ app.use('/uploads', express.static(db.UPLOADS_DIR));
 // Mirrored connected-art bundles (experimental, src/collections.js). Served same-origin so the
 // art runs and the display can frame it; locked to our own resources, just allowing the inline
 // script/handlers these p5 sketches use. Stays open with a password set (it's kiosk content).
+// connect-src includes data:/blob: because p5's loadImage() fetches images these sketches build in
+// memory as data: URLs (e.g. Azulejo's print-sheet fold diagram, used only by its export menu).
+// Without it that fetch is blocked: harmless to the displayed art, but it spams the console with a
+// "Failed to fetch" on every load. Still no remote origins (no phoning home).
 app.use('/collections', (_req, res, next) => {
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; " +
-    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; " +
+    "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' data: blob:; " +
     "object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
   next();
 }, express.static(collections.COLLECTIONS_DIR));
