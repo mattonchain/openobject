@@ -44,7 +44,7 @@ const REGISTRY = [
   },
   {
     slug: 'send-receive',
-    artist: 'Snowfro',
+    artist: 'Erick Calderon (Snowfro)',
     name: 'send/receive',
     chain: 'Ethereum',
     contract: '0xababababab20053426ad1c782de9ea8444358070',
