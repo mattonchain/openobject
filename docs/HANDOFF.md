@@ -59,7 +59,7 @@ The mini PC is a **MeLE Quieter 3Q** (confirmed from the unit's label; the BIOS 
 - mDNS via Avahi so the panel is reachable at `http://openobject.local`.
 - Samba available **only** if the optional SMB pull-source is enabled (see §8); not required for the default web-upload flow.
 
-The OS image should boot directly into the OpenObject display with no desktop, login, or visible Linux chrome.
+The OS image should boot directly into the OpenObject display with no desktop, login, or visible Linux chrome. Before that, during POST, the panel briefly shows the **Infinite Objects OEM boot splash** baked into the mini PC's firmware (BIOS board name `XXL`); it sits a layer below our software, is not removable short of reflashing the UEFI, and is expected on every power-up (it is the same splash the Reboot button used to hang on, §20). OpenObject's own first screen is the **OPEN/OBJECT** wordmark on black, so that logo is always the firmware, never us, and seeing it does not mean the wipe failed.
 
 > **Bench note (2026-06-13):** the factory unit already runs **Ubuntu** on this exact hardware (N5105 iGPU, the square HDMI panel, onboard Wi-Fi, the USB hub), so a Debian-based install is low-risk, graphics, panel, and networking are all known-good under mainstream Linux. The factory stack is heavier than ours (Ubuntu → Waydroid container → Android → White Walls) and boots slowly (~1 min to art); our native Node + Chromium-kiosk path should boot markedly faster.
 
