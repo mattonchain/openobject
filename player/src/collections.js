@@ -29,9 +29,31 @@ const REGISTRY = [
     // This collection animates on load via its global toggleRotation() (its "Toggle Rotation" menu).
     animateDefault: true,
   },
+  {
+    slug: 'as-the-days-go-by',
+    artist: 'Alex Kittoe',
+    name: 'As the Days Go By',
+    chain: 'Ethereum',
+    contract: '0x9a9b9b14581136cb2f0f53e2b65ba6c74fd660b4',
+    rpc: 'https://ethereum-rpc.publicnode.com',
+    // A time-aware still, not a generative sketch: the bundle itself swaps a day or night photo
+    // from the viewer's local clock (day = 6am-6pm), rechecking each minute. Nothing to engage on
+    // load, so this collection has no Animate control (animatable: false).
+    animateDefault: false,
+    animatable: false,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
+
+// Some collections host metadata/bundles on IPFS, which Node's fetch can't dereference (ipfs:// is
+// not http). Map ipfs:// to a public gateway for fetching only; the official ipfs:// URL is still
+// what we store verbatim. Plain http(s) (e.g. Arweave) passes through unchanged. Gateway is swappable.
+const IPFS_GATEWAY = 'https://ipfs.io/ipfs/';
+const toHttp = (url) => {
+  const s = String(url || '');
+  return s.startsWith('ipfs://') ? IPFS_GATEWAY + s.slice(7).replace(/^ipfs\//, '') : s;
+};
 
 // ── On-chain resolve: Token ID → official animation_url (+ title, preview) ──
 // tokenURI(uint256) is the ERC-721 standard; reading it is a free `eth_call` (no gas, no wallet)
@@ -61,7 +83,7 @@ async function resolveToken(slug, tokenId) {
   const tid = String(tokenId == null ? '' : tokenId).trim();
   if (!/^\d+$/.test(tid)) throw new Error('Token ID must be a number.');
   const metaUrl = await ethCallTokenURI(c, tid);                 // Ethereum → metadata location
-  const mr = await fetch(metaUrl);
+  const mr = await fetch(toHttp(metaUrl));                        // metadata may live on IPFS
   if (!mr.ok) throw new Error(`Couldn't read the token metadata (${mr.status}).`);
   const meta = await mr.json();
   const sourceUrl = meta.animation_url;                          // the official long URL
@@ -96,7 +118,7 @@ const ANIMATE_HOOK = `
 </script>`;
 
 async function fetchBuf(url) {
-  const r = await fetch(url);
+  const r = await fetch(toHttp(url));
   if (!r.ok) throw new Error(`fetch ${url} → ${r.status}`);
   return Buffer.from(await r.arrayBuffer());
 }
@@ -104,11 +126,14 @@ async function fetchBuf(url) {
 // Fetch the entry HTML + every relative asset it references (scripts, etc.), inject the hook.
 async function mirrorBundle(slug, sourceUrl) {
   if (isMirrored(slug)) return;
-  const u = new URL(sourceUrl);
+  const u = new URL(toHttp(sourceUrl));                                      // ipfs:// → gateway for the fetch
   const dir = u.pathname.slice(0, u.pathname.lastIndexOf('/') + 1);          // .../<txid>/
   const base = u.origin + dir;
   const entry = u.pathname.slice(u.pathname.lastIndexOf('/') + 1) || 'index.html';
   let html = (await fetchBuf(base + entry)).toString('utf8');
+  // A public gateway may inject a tracking beacon (e.g. Cloudflare's hidden cdn-cgi <a>) into the
+  // served HTML; it is not part of the artist's file, so strip it for a faithful mirror.
+  html = html.replace(/<a\b[^>]*cdn-cgi[^>]*><\/a>/gi, '');
 
   const assets = new Set();
   const re = /(?:src|href)=["']([^"']+)["']/gi;
@@ -147,7 +172,7 @@ async function cacheThumb(slug, tokenId, imageUrl) {
 async function toDataUrl(url) {
   if (!url) return null;
   try {
-    const r = await fetch(url);
+    const r = await fetch(toHttp(url));
     if (!r.ok) return null;
     const ct = r.headers.get('content-type') || 'image/png';
     return `data:${ct};base64,${Buffer.from(await r.arrayBuffer()).toString('base64')}`;
@@ -175,7 +200,7 @@ function list() {
   return REGISTRY
     .map((c) => {
       const st = getState(c.slug);
-      return { slug: c.slug, artist: c.artist, name: c.name, chain: c.chain, hidden: st.hidden, animate: st.animate, pieces: db.countConnected(c.slug) };
+      return { slug: c.slug, artist: c.artist, name: c.name, chain: c.chain, hidden: st.hidden, animate: st.animate, animatable: c.animatable !== false, pieces: db.countConnected(c.slug) };
     })
     .sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
 }

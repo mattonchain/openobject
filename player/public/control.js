@@ -132,10 +132,14 @@ function card(item) {
   const isPinned = item.id === pinnedId;
   const inRot = !!item.in_rotation;
   const connected = item.kind === 'connected';
-  // Connected pieces: a "Connected" badge instead of a format chip, artist as the subtitle, and
-  // no Fit/Fill (the square already fills the 1:1 frame). Otherwise a normal media card.
+  // Connected pieces: a "Connected" badge instead of a format chip, "by <Artist>" as the subtitle,
+  // and no Fit/Fill (each collection's bundle sizes itself; render is decided per collection in code).
+  // Otherwise a normal media card.
   const badge = connected ? '<span class="badge badge-connected">Connected</span>' : `<span class="badge">${item.format}</span>`;
-  const sub = connected ? escapeHtml((collectionsBySlug[item.collection] || {}).artist || '') : fmtBytes(item.bytes);
+  // Connected pieces attribute the artist uniformly ("by <Artist>"), since the official title may or
+  // may not embed the artist's name (Brinkman's does, Kittoe's doesn't). Files show their size.
+  const artistName = (collectionsBySlug[item.collection] || {}).artist || '';
+  const sub = connected ? (artistName ? `by ${escapeHtml(artistName)}` : '') : fmtBytes(item.bytes);
   const fitBtn = connected ? '' : `<button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>`;
   el.innerHTML = `
     <div class="thumb fit-${!connected && isFill ? 'fill' : 'fit'}">
@@ -760,14 +764,19 @@ function renderConnectedCard() {
   connectedList.replaceChildren(...collectionsList.map((c) => {
     const row = document.createElement('div');
     row.className = 'cc-row' + (c.hidden ? ' is-hidden' : '');
+    // Animate engages a piece's own motion on load. A collection with no motion to engage (a
+    // time-aware still like Alex Kittoe's, animatable:false) hides the control entirely.
+    const animateCtl = c.animatable === false ? ''
+      : `<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`;
     row.innerHTML = `
       <span class="cc-meta">
         <span class="cc-name">${escapeHtml(c.name)}</span>
-        <span class="cc-sub">${escapeHtml(c.artist)} · ${c.pieces} piece${c.pieces === 1 ? '' : 's'}</span>
+        <span class="cc-sub">by ${escapeHtml(c.artist)} · ${c.pieces} piece${c.pieces === 1 ? '' : 's'}</span>
       </span>
-      <span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>
+      ${animateCtl}
       <button class="cc-hide">${c.hidden ? 'Unhide' : 'Hide'}</button>`;
-    row.querySelector('.cc-switch').addEventListener('click', () => patchCollection(c.slug, { animate: !c.animate }));
+    const sw = row.querySelector('.cc-switch');
+    if (sw) sw.addEventListener('click', () => patchCollection(c.slug, { animate: !c.animate }));
     row.querySelector('.cc-hide').addEventListener('click', () => patchCollection(c.slug, { hidden: !c.hidden }));
     return row;
   }));

@@ -139,10 +139,12 @@ generative or web-hosted piece. OpenObject can show a few **specific, supported 
 kind. On the **Library** tab, tap **Add connected artwork**, pick the collection, and enter your
 piece's **Token ID** (the number on the piece's page, for example OpenSea shows it as "Token #101").
 OpenObject looks up the real artwork, downloads it to the frame so it plays offline, and adds it as a
-normal piece you can put in the Rotation or Pin like any other. The supported collections live in the
-**Settings** tab, under **Connected Collections**, where you can turn a collection's motion on or off
-(**Animate**) and hide ones you don't own. This is new and **curated**: only collections that have
-been specifically added will work, so it won't read just any link yet.
+normal piece you can put in the Rotation or Pin like any other. Some connected pieces even change
+through the day on their own, for example one shifts from daytime colors to moonlit tones at night,
+following your frame's local time. The supported collections live in the **Settings** tab, under
+**Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
+their motion on or off (**Animate**). This is new and **curated**: only collections that have been
+specifically added will work, so it won't read just any link yet.
 
 **Sleep hours** *(in the **Settings** tab)*. Optionally have the screen rest on a schedule. You get
 **two time ranges**, each with its own on/off checkbox, so you can cover both "while I'm at work"
