@@ -261,7 +261,7 @@ function list() {
   return REGISTRY
     .map((c) => {
       const st = getState(c.slug);
-      return { slug: c.slug, artist: c.artist, name: c.name, chain: c.chain, hidden: st.hidden, animate: st.animate, animatable: c.animatable !== false, pieces: db.countConnected(c.slug) };
+      return { slug: c.slug, artist: c.artist, name: c.name, chain: c.chain, hidden: st.hidden, animate: st.animate, animatable: c.animatable !== false, crop: c.crop || null, pieces: db.countConnected(c.slug) };
     })
     .sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
 }

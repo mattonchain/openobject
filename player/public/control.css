@@ -272,6 +272,10 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .thumb img, .thumb video { width: 100%; height: 100%; display: block; }
 .thumb.fit-fit  img, .thumb.fit-fit  video { object-fit: contain; }   /* mini preview of Fit */
 .thumb.fit-fill img, .thumb.fit-fill video { object-fit: cover; }     /* …and Fill */
+/* A connected collection that crops its art on the display (per-collection `crop`) crops its
+   thumbnail the same way, so the small preview matches the frame. The container already clips;
+   --thumb-crop (= 1/crop, e.g. 0.6 -> 1.6667) zooms the image to the cropped region (set in control.js). */
+.thumb.crop img, .rot-thumb.crop img, .cx-rthumb.crop img { transform: scale(var(--thumb-crop, 1)); }
 .badge {
   position: absolute;
   top: 8px;
@@ -471,13 +475,16 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .cx-collections { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .cx-col { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); cursor: pointer; }
 .cx-col.sel { border-color: #2f5a3c; background: #13201a; }
-.cx-col-art { font-size: 14px; }
+.cx-col-text { flex: 1; min-width: 0; }
+.cx-col-art { font-size: 14px; display: block; }
 .cx-col-sub { font-size: 12px; color: var(--muted); }
 .cx-col-check { margin-left: auto; color: #b6f0c2; opacity: 0; }
 .cx-col.sel .cx-col-check { opacity: 1; }
 .cx-result { display: flex; align-items: center; gap: 11px; margin-top: 13px; padding: 11px; border: 1px solid #2f5a3c; border-radius: 10px; background: #13201a; }
-.cx-result img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; flex: none; background: #000; }
-.cx-rtitle { font-size: 14px; }
+.cx-rthumb { width: 46px; height: 46px; border-radius: 8px; overflow: hidden; flex: none; background: #000; }
+.cx-rthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cx-rtext { flex: 1; min-width: 0; }
+.cx-rtitle { font-size: 14px; display: block; }
 .cx-rsub { font-size: 12px; color: var(--muted); }
 .cx-msg { margin-top: 12px; font-size: 13px; color: var(--danger); }
 .cx-foot { margin-top: 16px; display: flex; justify-content: flex-end; }

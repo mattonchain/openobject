@@ -124,6 +124,15 @@ const thumbTag = (item) =>
     ? `<img src="${escapeHtml(item.thumb || '')}" alt="" loading="lazy">`
     : mediaTag(item);
 
+// A connected collection that crops its art on the display (a per-collection `crop`) crops its
+// thumbnail the same way, so the small preview shows the same region the frame does. Returns the
+// zoom factor (1/crop) for that collection's slug, or 0 when it has no crop. The thumb container
+// already clips; control.css zooms the image by --thumb-crop when the `crop` class is present.
+const thumbCropScale = (slug) => {
+  const c = collectionsBySlug[slug];
+  return c && c.crop ? +(1 / c.crop).toFixed(4) : 0;
+};
+
 // ── Library tab ─────────────────────────────────────────────────────
 function card(item) {
   const el = document.createElement('div');
@@ -136,13 +145,14 @@ function card(item) {
   // and no Fit/Fill (each collection's bundle sizes itself; render is decided per collection in code).
   // Otherwise a normal media card.
   const badge = connected ? '<span class="badge badge-connected">Connected</span>' : `<span class="badge">${item.format}</span>`;
-  // Connected pieces attribute the artist uniformly ("by <Artist>"), since the official title may or
-  // may not embed the artist's name (Brinkman's does, Kittoe's doesn't). Files show their size.
+  // Connected pieces show the artist's name as the subtitle (the official title may or may not embed
+  // it: Brinkman's does, Kittoe's doesn't). Files show their size.
   const artistName = (collectionsBySlug[item.collection] || {}).artist || '';
-  const sub = connected ? (artistName ? `by ${escapeHtml(artistName)}` : '') : fmtBytes(item.bytes);
+  const sub = connected ? escapeHtml(artistName) : fmtBytes(item.bytes);
   const fitBtn = connected ? '' : `<button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>`;
+  const cs = connected ? thumbCropScale(item.collection) : 0; // crop the thumbnail to match the cropped display
   el.innerHTML = `
-    <div class="thumb fit-${!connected && isFill ? 'fill' : 'fit'}">
+    <div class="thumb fit-${!connected && isFill ? 'fill' : 'fit'}${cs ? ' crop' : ''}">
       ${thumbTag(item)}
       ${badge}
       <button class="rot-toggle${inRot ? ' on' : ''}" aria-pressed="${inRot}"
@@ -159,6 +169,8 @@ function card(item) {
       ${fitBtn}
       <button class="del">Delete</button>
     </div>`;
+  // CSP (style-src 'self') blocks inline style attributes, so set the crop zoom via JS (like display.js).
+  if (cs) el.querySelector('.thumb').style.setProperty('--thumb-crop', cs);
   el.querySelector('.rot-toggle').addEventListener('click', () => toggleRotation(item));
   el.querySelector('.pin').addEventListener('click', () => togglePin(item));
   const fitEl = el.querySelector('.fit');
@@ -181,10 +193,11 @@ function rotRow(item, idx, total) {
   el.draggable = true;
   el.dataset.id = item.id;
   const isPinned = item.id === pinnedId;
+  const cs = item.kind === 'connected' ? thumbCropScale(item.collection) : 0; // crop the thumbnail to match the cropped display
   el.innerHTML = `
     <span class="rot-grip" title="Drag to reorder">${GRIP}</span>
     <span class="rot-num">${idx + 1}</span>
-    <span class="rot-thumb fit-${item.fit === 'fill' ? 'fill' : 'fit'}">${thumbTag(item)}</span>
+    <span class="rot-thumb fit-${item.fit === 'fill' ? 'fill' : 'fit'}${cs ? ' crop' : ''}">${thumbTag(item)}</span>
     <span class="rot-meta">
       <span class="rot-name">${isPinned ? '<span class="rot-pin" title="Pinned">📌</span> ' : ''}${escapeHtml(item.original_name)}</span>
       <span class="rot-sub">${item.kind === 'connected' ? 'Connected' : item.format + (item.fit === 'fill' ? ' · fill' : '')}</span>
@@ -194,6 +207,7 @@ function rotRow(item, idx, total) {
       <button class="down" ${idx === total - 1 ? 'disabled' : ''} aria-label="Move later">${CHEV_DOWN}</button>
       <button class="rm" aria-label="Remove from rotation" title="Remove from rotation">${X_MARK}</button>
     </span>`;
+  if (cs) el.querySelector('.rot-thumb').style.setProperty('--thumb-crop', cs); // CSP-safe crop zoom (see card())
   el.querySelector('.up').addEventListener('click', () => move(item.id, -1));
   el.querySelector('.down').addEventListener('click', () => move(item.id, 1));
   el.querySelector('.rm').addEventListener('click', () => toggleRotation(item));
@@ -824,8 +838,8 @@ function renderPicker() {
     const row = document.createElement('div');
     row.className = 'cx-col' + (c.slug === cxSlug ? ' sel' : '');
     row.innerHTML = `
-      <span style="flex:1;min-width:0">
-        <span class="cx-col-art" style="display:block">${escapeHtml(c.name)}</span>
+      <span class="cx-col-text">
+        <span class="cx-col-art">${escapeHtml(c.name)}</span>
         <span class="cx-col-sub">${escapeHtml(c.artist)}</span>
       </span>
       <span class="cx-col-check">✓</span>`;
@@ -850,13 +864,16 @@ async function previewToken() {
   cxStatus('');
   cxResolved = j;
   const col = collectionsBySlug[cxSlug] || {};
+  const cs = thumbCropScale(cxSlug); // crop the preview to match the cropped display
   cxResult.innerHTML =
-    (j.image ? `<img src="${escapeHtml(j.image)}" alt="">` : '') +
-    `<span style="flex:1;min-width:0">
-       <span class="cx-rtitle" style="display:block">${escapeHtml(j.title)}</span>
+    (j.image ? `<span class="cx-rthumb${cs ? ' crop' : ''}"><img src="${escapeHtml(j.image)}" alt=""></span>` : '') +
+    `<span class="cx-rtext">
+       <span class="cx-rtitle">${escapeHtml(j.title)}</span>
        <span class="cx-rsub">${escapeHtml(col.artist || '')} · ${escapeHtml(col.name || '')}</span>
      </span>`;
   cxResult.hidden = false;
+  // CSP (style-src 'self') blocks inline style attributes, so set the crop zoom via JS (like display.js).
+  if (cs && j.image) cxResult.querySelector('.cx-rthumb').style.setProperty('--thumb-crop', cs);
   cxAdd.disabled = false;
 }
 
