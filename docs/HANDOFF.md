@@ -516,7 +516,7 @@ Added the second supported Connected Collection (§8): Alex Kittoe's *"As the Da
 - **No Animate control for stills.** A new registry flag `animatable: false` marks a collection with no motion to engage; the Settings card hides its Animate switch (control.js). Azulejo keeps its Animate toggle.
 - **Faithful mirror.** The mirror now strips a tracking beacon some public gateways inject into the served HTML (Cloudflare's hidden `cdn-cgi` `<a>`); it is not part of the artist's file.
 - **Editions are identical.** All 150 are numbered copies of the same media, so the one-bundle-per-collection mirror is correct.
-- **Verified on Mac** (Phase 1). Like any display/kiosk change, seeing it on the frame needs a cold power-cycle (self-update restarts the player, not the kiosk).
+- **Verified on Mac** (Phase 1). On the frame this arrives via the normal self-update: the player restart reloads `collections.js`, and **no kiosk power-cycle is needed** because no display/kiosk code changed (the display already renders any connected slug; the new piece folds into the rotation on the usual poll).
 
 ### 2026-06-17: Wi-Fi rejoin race fixed (openobject-netcheck watchdog)
 Second of the two follow-ups parked after the reboot fix. (The first, syncing the frame's installer checkout, was closed by an ordinary self-update: the frame's `/opt/openobject` now matches `main`, so re-running `install.sh` re-applies reboot=pci + SSH-on instead of stripping them.)
