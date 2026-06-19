@@ -256,8 +256,9 @@ A fresh, wall-mounted box has no art and isn't on Wi-Fi yet, but the control pan
 **Built 2026-06-13 (§20, Phase-1 stub).** The control panel's **Settings → Wi-Fi** card explains the
 first-run onboarding flow above; the setup AP + captive page themselves are **Phase 2** (they need the
 device's networking). The card also shows **how to reach the control panel now**, the live LAN
-address(es) (`http://<ip>:<port>`, from `GET /api/system`) plus the `openobject.local` name that
-resolves on the installed frame, which is real and useful in Phase 1.
+address(es) (`http://<ip>:<port>`, from `GET /api/system`) plus the `openobject.local` name **only where it
+resolves**: the installed frame, detected as `process.platform === 'linux'`. On a Mac/standalone that
+line is hidden, so the panel never advertises an address that would not work.
 
 **Reference, observed Infinite Objects onboarding (2026-06-13), and our refinements.** Matt captured
 the stock XXL's Wi-Fi setup; it's a proven flow worth building on. Observed: the frame's screen shows
@@ -291,7 +292,7 @@ photos never enter the repo, §8). Build none of this in Phase 1.
 |---|---|---|
 | Audio | **Muted, always** | Silent art on a wall. The frame has no speaker, and muted is the intent regardless. |
 | Control-panel access | **Open on LAN**, optional password (built 2026-06-16) | Off by default (no login friction). When set in Settings it gates the control panel + every mutating API; the kiosk display stays open. HMAC-signed httpOnly cookie session, scrypt-hashed password, no new dependency. |
-| Idle / empty screen | **Branded card**, not black | Shows OpenObject mark + "add art at openobject.local". Takes a **logo asset** (Matt-supplied) so the mark drops in without redesign. |
+| Idle / empty screen | **Branded card**, not black | Shows OpenObject mark + an "add art at …" line whose address is the host the display was opened at, falling back to the advertised name on a loopback host (openobject.local on the frame, localhost:3000 when a Mac is the display), so it is never a false instruction. Takes a **logo asset** (Matt-supplied) so the mark drops in without redesign. |
 | Display name / mDNS | `openobject.local` | IP fallback shown on setup page. |
 | Fit/Fill default | **Fit** (original aspect ratio); settable | Applies to new clips; per-clip override always available. |
 | Display duration | **Settable global** (seconds / minutes / hours) | One equal-time duration for **every** piece; no per-clip override. |
@@ -444,6 +445,8 @@ Maintain **two** living documents as the build proceeds, not one written once an
 1. **`docs/HANDOFF.md` (this doc)**, the engineering working doc. Accumulates design tweaks, troubleshooting notes, bench discoveries, and test results.
 2. **`docs/SETUP-GUIDE.md`**, the **casual-user** guide. No engineering. For someone who has never seen the handoff and never will.
 
+Since 2026-06-19 there is also **`docs/MAC-DISPLAY-SETUP.md`**, a standalone **no-frame** guide (running OpenObject on a Mac as the display, for someone who has no frame); keep it accurate to shipped behavior the same way.
+
 **Discipline:** whenever a change affects what a new user does, a different BIOS key, an added step, a renamed setting, **update the Setup Guide in the same change.** The Setup Guide must always reflect shipped behavior.
 
 ### Setup Guide scaffold (fill placeholders as values are confirmed)
@@ -533,6 +536,15 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-19: Repositioned around the no-frame path ("your Mac as the display")
+OpenObject's **primary on-ramp is now running on a Mac with no frame** (the Mac is the display, full screen in Chrome `--kiosk`); reviving an XXL frame becomes the advanced path. Most people who would want OpenObject do not own an XXL, so the Mac path is the realistic broad door, while the next-stranded-owner mission stays the heart. (Matt, 2026-06-19.)
+- **New guide.** Added **`docs/MAC-DISPLAY-SETUP.md`** ("No Frame? Use Your Mac as the Display"), a from-scratch runbook (install Node, download from GitHub, `npm install` / `npm start`, add art, Chrome kiosk at `localhost:3000/display`), validated by a clean-Mac dry-run.
+- **README rewritten** to lead with the local art-player capability and a frame-or-not fork (no-frame Mac path first, linking the guide; frame revival second), plus a no-frame pointer under the hardware table and a no-warranty note split so the Mac path is not described as wiping anything.
+- **Address-aware hints.** The idle splash and the control panel's reach card no longer hardcode `openobject.local` (false when the Mac is the display). The idle hint shows the host the display was opened at, falling back to the server's advertised name on a loopback host (the frame's kiosk opens `localhost`). The reach card advertises `openobject.local` only where it resolves, detected as `process.platform === 'linux'` (the frame is Debian; a Mac is darwin). Idle is a display change, so the frame picks it up on a power-cycle.
+- **Locked terminology.** Fork on frame-or-not, never on "Mac" (a Mac is used in both setups): "the frame" = the Infinite Objects hardware; "your Mac as the display" = the no-frame path; "the control panel" = the shared management page.
+- **Reset appendix neutralized.** Renamed `appendix-whitewalls-reset.md` to `appendix-original-reset.md`, retitled "Resetting the original software", no cause or culprit named (White Walls kept only as the on-screen menu label).
+- **Still pending:** the openobject.io landing page (`site/index.html`) repositioning to match (last step; does not touch the frame).
 
 ### 2026-06-19: Connected Collections promoted from experimental to core
 Connected Collections are **no longer experimental**; they are a core part of OpenObject's purpose (showing art that has no downloadable file, alongside ordinary uploads). Dropped the "experimental" qualifier from the feature's current-state descriptions (§6, §8, §12, §17), the Setup Guide, and the code/UI comments. The dated build-log entries below are left as the historical record (the feature was experimental when they were written). No behavior change. (Matt, 2026-06-19.)
