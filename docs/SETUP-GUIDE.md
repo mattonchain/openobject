@@ -151,7 +151,9 @@ black-and-white and full color; a simple speed slider lets you set how fast that
 it on the full-color photo. Another, V4w.enko's *Perfect Everything*, is an ever-shifting pattern of
 concentric colored rings that fills the whole panel and drifts on its own. And Cinzia y Gabriel's *Pendulum* is a
 generative study of motion: a chain of colored orbs swings like a pendulum, tracing slow, ever-shifting arcs across the
-whole panel. The supported collections live in the **Settings** tab, under
+whole panel. And Jeremy Booth's *Lost in Moffat County* is a series of painterly Western scenes that shift from day to
+night on their own with your local time; switch on Animate for that piece (in Settings) to reveal a hand-drawn animated
+easter egg. The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
 their motion on or off, or set how fast it moves. This is new and **curated**: only collections that have been
 specifically added will work, so it won't read just any link yet.

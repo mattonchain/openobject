@@ -138,6 +138,33 @@ const REGISTRY = [
     animateDefault: false,
     animatable: false,
   },
+  {
+    slug: 'lost-in-moffat-county',
+    artist: 'Jeremy Booth',
+    name: 'Lost in Moffat County',
+    chain: 'Ethereum',
+    contract: '0x98a8ae5ea04a7cff60cd4877a6e97eb2113b111e',
+    rpc: 'https://ethereum-rpc.publicnode.com',
+    // ERC-721 tokenURI, but each token's metadata points to its OWN media bundle (hosted on Arweave or
+    // IPFS, mixed across the collection) with its own day/night/easter assets, so each token mirrors into
+    // its own dir (perToken, like send/receive) rather than sharing one. The owner enters a Token ID.
+    perToken: true,
+    // The bundle loads p5 (cdnjs) and its day/night photos + easter-egg GIFs by ABSOLUTE URL (a Pinata
+    // gateway) from inside inline loadImage() calls, so localize them into the bundle and rewrite the refs
+    // for offline play (the Golden Lining mechanism).
+    localizeAbsolute: true,
+    // A time-aware p5 piece (like Kittoe): each draw it reads the viewer's LOCAL clock and crossfades a
+    // day photo into a night photo (sunrise 6-8, sunset 18-20), so the background is chosen automatically
+    // with no app timezone UI (correctness = the frame's OS clock). It also has a click "easter egg": a tap
+    // toggles a global `easterEgg` flag that swaps in an animated GIF overlay (also day/night aware). That
+    // is our optional Animate, default OFF (background only), engaged hands-free by the easterEgg hook below.
+    animateDefault: false,
+    animateHook: 'easterEgg',
+    // The photos are square (3840^2 / 2500^2) drawn object-fit: contain, so on the 1:1 stage they fill edge
+    // to edge (no crop, no aspect). Token 1 ("Desert Steel") is a static landscape image with no
+    // animation_url and is intentionally NOT supported here (it resolves with a clear "no artwork URL"
+    // error); it can be added as a normal upload if ever wanted.
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
@@ -299,6 +326,23 @@ const SPEED_HOOK = `
 })();
 </script>`;
 
+// Injected into "Lost in Moffat County" (Jeremy Booth): the piece is a time-aware day/night photo that
+// also has a click "easter egg" (its touchEnded toggles a global `easterEgg`, swapping in an animated GIF
+// overlay). With ?ooanim=1 (Animate on) we engage that overlay hands-free: wait until the sketch's setup()
+// has run (it sets `easterEgg = false` once, after preload loads the images), then set it true ONCE. With
+// no ?ooanim the piece is untouched, just the automatic time-of-day background.
+const EASTER_HOOK = `
+<script>
+(function(){
+  if (new URLSearchParams(location.search).get('ooanim') !== '1') return;
+  var n = 0;
+  var iv = setInterval(function(){
+    if (++n > 300) { clearInterval(iv); return; }   // ~30s safety
+    if (typeof window.easterEgg === 'boolean') { window.easterEgg = true; clearInterval(iv); }
+  }, 100);
+})();
+</script>`;
+
 async function fetchBuf(url) {
   const r = await fetch(toHttp(url));
   if (!r.ok) throw new Error(`fetch ${url} → ${r.status}`);
@@ -377,10 +421,12 @@ async function mirrorBundle(slug, sourceUrl, tokenId) {
     html = html.replace(/\s+(?:integrity|crossorigin|referrerpolicy)=("[^"]*"|'[^']*')/gi, '');
   }
 
-  // Inject the matching hook: speedControl pieces get the cosine sweep (driven by ?oospeed); other
-  // Animate-control pieces get the fire-once hook. Self-animating pieces (Kittoe's time-still,
-  // send/receive's live render) get neither and stay verbatim.
-  const hook = c && c.speedControl ? SPEED_HOOK : (c && c.animatable !== false ? ANIMATE_HOOK : '');
+  // Inject the matching hook (engaged by ?ooanim / ?oospeed at display time): an easterEgg collection
+  // gets the overlay-toggle hook; a speedControl collection gets the cosine sweep; other Animate-control
+  // pieces get the fire-once hook. Self-animating / still pieces (Kittoe, send/receive) get none, verbatim.
+  const hook = c && c.animateHook === 'easterEgg' ? EASTER_HOOK
+    : c && c.speedControl ? SPEED_HOOK
+    : (c && c.animatable !== false ? ANIMATE_HOOK : '');
   if (hook) html = html.includes('</body>') ? html.replace('</body>', hook + '\n</body>') : html + hook;
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'index.html'), html, 'utf8');
