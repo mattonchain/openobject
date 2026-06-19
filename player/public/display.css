@@ -76,6 +76,19 @@ body {
   transform: translate(-50%, -50%);
 }
 
+/* Aspect-fit: a connected piece that declares its aspect (a landscape photo, not a square-composed
+   sketch) is sized to that ratio and centered, so the bare black stage forms the letterbox top and
+   bottom — the iframe equivalent of object-fit: contain (HANDOFF §6). No background is painted to
+   fake the bars; they ARE the stage, exactly as a landscape image letterboxes in Fit mode. --ar is
+   set per piece in display.js. (Sized for a landscape ratio on the 1:1 panel, our only such case.) */
+.layer.aspect { display: flex; align-items: center; justify-content: center; }
+.layer.aspect iframe {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: var(--ar);
+}
+
 /* Fit = whole piece, original aspect, black fills the rest. Fill = cover, center-crop. */
 .fit-fit  img, .fit-fit  video { object-fit: contain; }
 .fit-fill img, .fit-fill video { object-fit: cover; object-position: center; }

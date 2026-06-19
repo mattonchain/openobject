@@ -144,9 +144,11 @@ through the day on their own, for example one shifts from daytime colors to moon
 following your frame's local time. Another, Snowfro's *send/receive*, is a living piece that reads
 its art network over the internet and animates non-stop, filling the whole panel edge to edge;
 because it's live, this one looks its best when the frame is online (the others play fully offline
-once they're added). The supported collections live in the **Settings** tab, under
+once they're added). One more, Juicy Julio's *Golden Lining*, is a desert photo that drifts between
+black-and-white and full color; a simple speed slider lets you set how fast that drift moves, or rest
+it on the full-color photo. The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
-their motion on or off (**Animate**). This is new and **curated**: only collections that have been
+their motion on or off, or set how fast it moves. This is new and **curated**: only collections that have been
 specifically added will work, so it won't read just any link yet.
 
 **Sleep hours** *(in the **Settings** tab)*. Optionally have the screen rest on a schedule. You get

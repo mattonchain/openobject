@@ -27,7 +27,7 @@ let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HA
 let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
 
 const sig = (item) => item.kind === 'connected'
-  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0) + '|' + (item.rpcUrl || '')
+  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0) + '|' + (item.speed == null ? '' : item.speed) + '|' + (item.rpcUrl || '')
   : item.fit + '|' + item.filename;
 const once = (fn) => {
   let done = false;
@@ -71,6 +71,7 @@ function render(layer, item, onReady) {
     if (qIdx >= 0) params.push(item.source_url.slice(qIdx + 1));         // per-piece seed (shared bundles)
     if (item.rpcUrl) params.push('rpc_url=' + encodeURIComponent(item.rpcUrl)); // live RPC override
     if (item.animate) params.push('ooanim=1');                          // fire the bundle's animate hook
+    if (item.speed != null) params.push('oospeed=' + encodeURIComponent(item.speed)); // 0..10 cosine sweep speed
     const tokenSeg = item.perToken && item.token_id != null ? '/' + encodeURIComponent(item.token_id) : '';
     el.src = '/collections/' + item.collection + tokenSeg + '/index.html' + (params.length ? '?' + params.join('&') : '');
     // Some collections compose the art in a centered inset with a black margin (e.g. send/receive's
@@ -80,6 +81,13 @@ function render(layer, item, onReady) {
     if (item.crop && item.crop > 0 && item.crop < 1) {
       layer.classList.add('crop');
       el.style.setProperty('--crop-scale', (100 / item.crop).toFixed(3) + '%');
+    }
+    // A connected piece that declares an aspect (e.g. a landscape photo, not a square-composed
+    // sketch) is sized to that aspect and centered, so the bare black stage forms the letterbox
+    // top/bottom — the iframe equivalent of object-fit: contain (HANDOFF §6). No painted background.
+    if (item.aspect) {
+      layer.classList.add('aspect');
+      el.style.setProperty('--ar', item.aspect);
     }
   } else if (item.kind === 'video') {
     el = document.createElement('video');

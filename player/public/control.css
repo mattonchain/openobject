@@ -505,6 +505,11 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .cc-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: left 0.12s, background 0.12s; }
 .cc-switch.on { background: #1c3a26; border-color: #2f5a3c; }
 .cc-switch.on::after { left: 16px; background: #b6f0c2; }
+/* Motion speed slider — for a speedControl collection (0–10, 0 = still), in place of the switch */
+.cc-speed { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
+.cc-speed-label { white-space: nowrap; }
+.cc-speed-val { color: var(--text); }
+.cc-speed-range { width: 92px; accent-color: #6fcf97; cursor: pointer; }
 .cc-hide { appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; flex: none; }
 .cc-hide:hover { color: var(--text); border-color: #4a4a52; }
 .cc-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }

@@ -69,6 +69,37 @@ const REGISTRY = [
     // Measured off the static "white version" of the sprite card, constant across this collection.
     crop: 0.6,
   },
+  {
+    slug: 'dune-reveries-editions',
+    artist: 'Juicy Julio',
+    name: 'Dune Reveries - Editions',
+    chain: 'Ethereum',
+    contract: '0x45dcaec1c3c51148771a7a32669ea0adab051b3e',
+    rpc: 'https://ethereum-rpc.publicnode.com',
+    // ERC-1155, not ERC-721: the metadata location is read from uri(uint256), not tokenURI.
+    erc1155: true,
+    // The collection holds three editions, but only "Golden Lining" (token 1) needs special handling
+    // (the other two are plain static images). So we support exactly token 1 and skip the Token-ID
+    // prompt — the add flow uses fixedToken (still resolved on-chain, for faithfulness).
+    fixedToken: '1',
+    // A p5.js sketch over a single landscape JPEG: each frame it draws the photo, greys the whole
+    // canvas, then redraws the same photo in colour on top at a variable opacity — a global
+    // b&w<->colour crossfade the artist drives with mouse-X. We never feed input; a fluid cosine
+    // sweep drives that global `opacity` itself (SPEED_HOOK). A 0..10 speed (0 = static full colour)
+    // replaces the on/off Animate control for this collection.
+    speedControl: true,
+    speedDefault: 2,
+    // The photo is 5:4 landscape; declaring its aspect lets the display size the iframe to the piece
+    // and letterbox it against the bare black stage natively — no white padding, no zoom-crop (§6).
+    aspect: '2124 / 1698',
+    // p5 (cdnjs) and the JPEG (ipfs.io) are absolute URLs, and the image refs live inside an inline
+    // script (loadImage('…')) the generic relative-asset scan can't see. Localize downloads every
+    // absolute http(s) asset into the bundle and rewrites the refs, so it plays fully offline.
+    localizeAbsolute: true,
+    // The token's official `image` is a stylised half-grey/half-colour split preview; show a
+    // full-colour thumbnail (the master photo the sketch loads) instead, matching the rest state.
+    thumbFromAnimationImage: true,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
@@ -83,10 +114,11 @@ const toHttp = (url) => {
 };
 
 // ── On-chain resolve: Token ID → official animation_url (+ title, preview) ──
-// tokenURI(uint256) is the ERC-721 standard; reading it is a free `eth_call` (no gas, no wallet)
-// that returns the token's canonical metadata location — the source of truth, not a render.
+// tokenURI(uint256) (ERC-721) and uri(uint256) (ERC-1155) are both a free `eth_call` (no gas, no
+// wallet) returning the token's canonical metadata location — the source of truth, not a render.
 async function ethCallTokenURI(c, tokenId) {
-  const data = '0xc87b56dd' + BigInt(tokenId).toString(16).padStart(64, '0'); // tokenURI(uint256)
+  const selector = c.erc1155 ? '0x0e89341c' : '0xc87b56dd'; // uri(uint256) | tokenURI(uint256)
+  const data = selector + BigInt(tokenId).toString(16).padStart(64, '0');
   const r = await fetch(c.rpc, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -98,16 +130,30 @@ async function ethCallTokenURI(c, tokenId) {
   const hex = (j.result || '').replace(/^0x/, '');
   if (hex.length < 128) throw new Error("No such token (check the Token ID).");
   const len = parseInt(hex.slice(64, 128), 16);            // ABI string: [offset][length][bytes]
-  const str = Buffer.from(hex.slice(128, 128 + len * 2), 'hex').toString('utf8');
+  let str = Buffer.from(hex.slice(128, 128 + len * 2), 'hex').toString('utf8');
   if (!str) throw new Error('That token has no metadata URL.');
+  // ERC-1155 may return a templated URI with an {id} placeholder (lowercase, zero-padded hex).
+  if (c.erc1155 && str.includes('{id}')) str = str.replace(/\{id\}/g, BigInt(tokenId).toString(16).padStart(64, '0'));
   return str;
+}
+
+// Find the first image a bundle's HTML references: a p5 loadImage('…') first, else any absolute URL
+// with an image extension. Lets a collection source a full-colour thumbnail from the artwork itself
+// (e.g. when the token's official `image` is a stylised preview we don't want to show).
+function firstImageUrl(html) {
+  const s = String(html);
+  const m = s.match(/loadImage\(\s*['"]([^'"]+)['"]/);
+  if (m) return m[1];
+  const u = s.match(/https?:\/\/[^\s"'`<>()]+\.(?:jpe?g|png|gif|webp|avif)/i);
+  return u ? u[0] : null;
 }
 
 // Returns { tokenId, title, sourceUrl (verbatim official URL), image (preview, may be null) }.
 async function resolveToken(slug, tokenId) {
   const c = bySlug(slug);
   if (!c) throw new Error('Unknown collection.');
-  const tid = String(tokenId == null ? '' : tokenId).trim();
+  // fixedToken collections support exactly one piece, so the add flow need not send a Token ID.
+  const tid = String((tokenId == null || tokenId === '') ? (c.fixedToken || '') : tokenId).trim();
   if (!/^\d+$/.test(tid)) throw new Error('Token ID must be a number.');
   const metaUrl = await ethCallTokenURI(c, tid);                 // Ethereum → metadata location
   const mr = await fetch(toHttp(metaUrl));                        // metadata may live on IPFS
@@ -115,7 +161,13 @@ async function resolveToken(slug, tokenId) {
   const meta = await mr.json();
   const sourceUrl = meta.animation_url;                          // the official long URL
   if (!sourceUrl) throw new Error('This token has no artwork URL in its metadata.');
-  return { tokenId: tid, title: meta.name || `${c.name} #${tid}`, sourceUrl, image: meta.image || null };
+  let image = meta.image || null;
+  // Prefer the artwork's own image over a stylised official preview (e.g. Golden Lining's split
+  // half-grey/half-colour `image`): pull the first image the bundle loads and use that instead.
+  if (c.thumbFromAnimationImage) {
+    try { const img = firstImageUrl(await (await fetch(toHttp(sourceUrl))).text()); if (img) image = img; } catch { /* keep meta.image */ }
+  }
+  return { tokenId: tid, title: meta.name || `${c.name} #${tid}`, sourceUrl, image };
 }
 
 // ── Mirror the shared render bundle once, served same-origin (server CSP allows it to run and
@@ -165,10 +217,56 @@ const ANIMATE_HOOK = `
 })();
 </script>`;
 
+// Injected into a speedControl collection's mirror: drive the sketch's global b&w<->colour amount
+// (`window.opacity`, 0..100) with a fluid cosine sweep so the piece animates hands-free, no input.
+// The speed 0..10 rides in on ?oospeed=N (display.js): 0 holds full colour, 1..10 set the round-trip
+// pace. A cosine eases in/out at both turns (velocity 0 at the extremes) and never stops or jumps,
+// and is anchored on full colour (phase 0 -> opacity 100). With no ?oospeed the artwork is untouched
+// (it keeps its original mouse interaction).
+const SPEED_HOOK = `
+<script>
+(function(){
+  var sp = parseFloat(new URLSearchParams(location.search).get('oospeed'));
+  if (isNaN(sp)) return;
+  sp = Math.max(0, Math.min(10, sp));
+  var clamp = function(v){ return Math.max(0, Math.min(100, v)); };
+  if (sp <= 0) { setInterval(function(){ window.opacity = 100; }, 16); return; } // rest: full colour
+  var TWO_PI = Math.PI * 2, cycleMs = 48000 / sp, phase = 0, last = null;
+  requestAnimationFrame(function f(t){
+    requestAnimationFrame(f);
+    if (last === null) last = t;
+    phase += ((t - last) / cycleMs) * TWO_PI; last = t;
+    if (phase >= TWO_PI) phase -= TWO_PI;
+    window.opacity = clamp(50 + 50 * Math.cos(phase));
+  });
+})();
+</script>`;
+
 async function fetchBuf(url) {
   const r = await fetch(toHttp(url));
   if (!r.ok) throw new Error(`fetch ${url} → ${r.status}`);
   return Buffer.from(await r.arrayBuffer());
+}
+
+// Like fetchBuf but also returns the content-type, so a localized asset with no extension in its
+// URL (e.g. an IPFS CID) can be given a sensible local filename.
+async function fetchAsset(url) {
+  const r = await fetch(toHttp(url));
+  if (!r.ok) throw new Error(`fetch ${url} → ${r.status}`);
+  return { buf: Buffer.from(await r.arrayBuffer()), ct: (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase() };
+}
+
+// Best-effort file extension for a localized asset whose URL has none, from the content-type and
+// then magic bytes. Only used to name the local copy; the browser sniffs content for images anyway.
+function extFor(ct, buf) {
+  const byCt = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'application/javascript': '.js', 'text/javascript': '.js', 'text/css': '.css' }[ct];
+  if (byCt) return byCt;
+  if (buf && buf.length > 3) {
+    if (buf[0] === 0xff && buf[1] === 0xd8) return '.jpg';
+    if (buf[0] === 0x89 && buf[1] === 0x50) return '.png';
+    if (buf[0] === 0x47 && buf[1] === 0x49) return '.gif';
+  }
+  return '';
 }
 
 // Fetch the entry HTML + every relative asset it references (scripts, etc.). For collections that
@@ -200,11 +298,33 @@ async function mirrorBundle(slug, sourceUrl, tokenId) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, buf);
   }
-  // Only collections with an Animate control (e.g. Azulejo's toggleRotation) get the hook. Pieces
-  // that animate on their own (Kittoe's time-still, send/receive's live render) stay verbatim.
-  if (c && c.animatable !== false) {
-    html = html.includes('</body>') ? html.replace('</body>', ANIMATE_HOOK + '\n</body>') : html + ANIMATE_HOOK;
+
+  // Some collections reference assets by ABSOLUTE URL (a CDN script, an IPFS image), sometimes from
+  // inside an inline script (loadImage('https://…')) the src/href scan above can't see. For those,
+  // download every absolute http(s) asset into the bundle and rewrite the reference to a local file,
+  // so the piece plays with no network. Gated per collection; others stay verbatim (still absolute).
+  if (c && c.localizeAbsolute) {
+    const urls = [...new Set(html.match(/https?:\/\/[^\s"'`<>()]+/gi) || [])];
+    let n = 0;
+    for (const url of urls) {
+      let asset;
+      try { asset = await fetchAsset(url); } catch { continue; }              // unreachable → leave as-is
+      const tail = url.split(/[?#]/)[0].split('/').pop() || `asset-${n}`;
+      const name = /\.[a-z0-9]{2,5}$/i.test(tail) ? tail : tail + extFor(asset.ct, asset.buf);
+      fs.mkdirSync(out, { recursive: true });
+      fs.writeFileSync(path.join(out, name), asset.buf);
+      html = html.split(url).join(name);                                      // rewrite every occurrence
+      n++;
+    }
+    // Subresource-integrity / crossorigin on a now-local script would fail or be pointless — drop them.
+    html = html.replace(/\s+(?:integrity|crossorigin|referrerpolicy)=("[^"]*"|'[^']*')/gi, '');
   }
+
+  // Inject the matching hook: speedControl pieces get the cosine sweep (driven by ?oospeed); other
+  // Animate-control pieces get the fire-once hook. Self-animating pieces (Kittoe's time-still,
+  // send/receive's live render) get neither and stay verbatim.
+  const hook = c && c.speedControl ? SPEED_HOOK : (c && c.animatable !== false ? ANIMATE_HOOK : '');
+  if (hook) html = html.includes('</body>') ? html.replace('</body>', hook + '\n</body>') : html + hook;
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'index.html'), html, 'utf8');
 }
@@ -240,7 +360,7 @@ async function toDataUrl(url) {
   } catch { return null; }
 }
 
-// ── Per-frame curation state (hidden / animate), merged over the registry defaults ──
+// ── Per-frame curation state (hidden / animate / speed), merged over the registry defaults ──
 function getState(slug) {
   const c = bySlug(slug);
   if (!c) return null;
@@ -248,6 +368,8 @@ function getState(slug) {
   return {
     hidden: st ? !!st.hidden : false,
     animate: st && st.animate != null ? !!st.animate : c.animateDefault,
+    // Speed-controlled collections carry a 0..10 motion speed (0 = static); others have none.
+    speed: c.speedControl ? (st && st.speed != null ? st.speed : c.speedDefault) : null,
   };
 }
 function setState(slug, patch) {
@@ -261,7 +383,16 @@ function list() {
   return REGISTRY
     .map((c) => {
       const st = getState(c.slug);
-      return { slug: c.slug, artist: c.artist, name: c.name, chain: c.chain, hidden: st.hidden, animate: st.animate, animatable: c.animatable !== false, crop: c.crop || null, pieces: db.countConnected(c.slug) };
+      return {
+        slug: c.slug, artist: c.artist, name: c.name, chain: c.chain,
+        hidden: st.hidden, animate: st.animate,
+        // A speedControl collection shows a 0..10 slider instead of the on/off Animate switch.
+        animatable: c.animatable !== false && !c.speedControl,
+        speedControl: !!c.speedControl, speed: st.speed, speedMax: 10,
+        fixedToken: c.fixedToken || null,    // single-piece collection: no Token-ID prompt
+        crop: c.crop || null, aspect: c.aspect || null,
+        pieces: db.countConnected(c.slug),
+      };
     })
     .sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
 }

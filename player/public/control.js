@@ -59,6 +59,7 @@ const cxOverlay = document.getElementById('cxOverlay');
 const cxClose = document.getElementById('cxClose');
 const cxCollections = document.getElementById('cxCollections');
 const cxToken = document.getElementById('cxToken');
+const cxTokenLabel = document.getElementById('cxTokenLabel');
 const cxResult = document.getElementById('cxResult');
 const cxMsg = document.getElementById('cxMsg');
 const cxAdd = document.getElementById('cxAdd');
@@ -200,7 +201,7 @@ function rotRow(item, idx, total) {
     <span class="rot-thumb fit-${item.fit === 'fill' ? 'fill' : 'fit'}${cs ? ' crop' : ''}">${thumbTag(item)}</span>
     <span class="rot-meta">
       <span class="rot-name">${isPinned ? '<span class="rot-pin" title="Pinned">📌</span> ' : ''}${escapeHtml(item.original_name)}</span>
-      <span class="rot-sub">${item.kind === 'connected' ? 'Connected' : item.format + (item.fit === 'fill' ? ' · fill' : '')}</span>
+      <span class="rot-sub">${item.kind === 'connected' ? 'Connected' : item.format.toUpperCase() + (item.fit === 'fill' ? ' · Fill' : '')}</span>
     </span>
     <span class="rot-btns">
       <button class="up" ${idx === 0 ? 'disabled' : ''} aria-label="Move earlier">${CHEV_UP}</button>
@@ -778,19 +779,35 @@ function renderConnectedCard() {
   connectedList.replaceChildren(...collectionsList.map((c) => {
     const row = document.createElement('div');
     row.className = 'cc-row' + (c.hidden ? ' is-hidden' : '');
-    // Animate engages a piece's own motion on load. A collection with no motion to engage (a
-    // time-aware still like Alex Kittoe's, animatable:false) hides the control entirely.
-    const animateCtl = c.animatable === false ? ''
-      : `<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`;
+    // The motion control depends on the collection: a speedControl piece (one we auto-animate at a
+    // chosen pace) gets a 0–10 slider, 0 = still; an Animate-on-load piece gets the on/off switch; a
+    // collection with no motion to engage (a time-aware still, animatable:false) gets neither.
+    let motionCtl = '';
+    if (c.speedControl) {
+      const v = c.speed == null ? 0 : c.speed;
+      motionCtl = `<span class="cc-speed">
+        <span class="cc-speed-label">Motion <span class="cc-speed-val">${v === 0 ? 'Off' : v}</span></span>
+        <input class="cc-speed-range" type="range" min="0" max="${c.speedMax || 10}" step="1" value="${v}" aria-label="Motion speed for ${escapeHtml(c.name)}">
+      </span>`;
+    } else if (c.animatable !== false) {
+      motionCtl = `<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`;
+    }
     row.innerHTML = `
       <span class="cc-meta">
         <span class="cc-name">${escapeHtml(c.name)}</span>
         <span class="cc-sub">by ${escapeHtml(c.artist)} · ${c.pieces} piece${c.pieces === 1 ? '' : 's'}</span>
       </span>
-      ${animateCtl}
+      ${motionCtl}
       <button class="cc-hide">${c.hidden ? 'Unhide' : 'Hide'}</button>`;
     const sw = row.querySelector('.cc-switch');
     if (sw) sw.addEventListener('click', () => patchCollection(c.slug, { animate: !c.animate }));
+    const range = row.querySelector('.cc-speed-range');
+    if (range) {
+      const valEl = row.querySelector('.cc-speed-val');
+      // Update the label live as the slider moves; save on release (the display polls the change in).
+      range.addEventListener('input', () => { valEl.textContent = Number(range.value) === 0 ? 'Off' : range.value; });
+      range.addEventListener('change', () => patchCollection(c.slug, { speed: Number(range.value) }));
+    }
     row.querySelector('.cc-hide').addEventListener('click', () => patchCollection(c.slug, { hidden: !c.hidden }));
     return row;
   }));
@@ -821,8 +838,9 @@ function openConnected() {
   cxToken.value = '';
   cxResult.hidden = true; cxStatus(''); cxAdd.disabled = true;
   renderPicker();
+  maybeAutoPreview();                       // a fixed-token collection resolves its one piece up front
   cxOverlay.hidden = false;
-  setTimeout(() => cxToken.focus(), 0);
+  if (!cxToken.hidden) setTimeout(() => cxToken.focus(), 0);
 }
 const closeConnected = () => { cxOverlay.hidden = true; };
 
@@ -843,16 +861,28 @@ function renderPicker() {
         <span class="cx-col-sub">${escapeHtml(c.artist)}</span>
       </span>
       <span class="cx-col-check">✓</span>`;
-    row.addEventListener('click', () => { cxSlug = c.slug; resetResolve(); renderPicker(); });
+    row.addEventListener('click', () => { cxSlug = c.slug; resetResolve(); renderPicker(); maybeAutoPreview(); });
     return row;
   }));
+  syncTokenInput();
+}
+
+// A fixedToken collection supports a single piece, so the Token ID field is hidden and the piece is
+// resolved automatically; every other collection shows the field and waits for a Token ID.
+function syncTokenInput() {
+  const fixed = !!(collectionsBySlug[cxSlug] || {}).fixedToken;
+  cxTokenLabel.hidden = fixed;
+  cxToken.hidden = fixed;
+}
+function maybeAutoPreview() {
+  if ((collectionsBySlug[cxSlug] || {}).fixedToken) previewToken();
 }
 
 function resetResolve() { cxResolved = null; cxResult.hidden = true; cxStatus(''); cxAdd.disabled = true; }
 
 async function previewToken() {
   resetResolve();
-  const tokenId = cxToken.value.trim();
+  const tokenId = (collectionsBySlug[cxSlug] || {}).fixedToken || cxToken.value.trim();
   if (!cxSlug || !tokenId) return;
   cxStatus('Looking up…');
   let r, j;
