@@ -149,7 +149,9 @@ because it's live, this one looks its best when the frame is online (the others 
 once they're added). One more, Juicy Julio's *Golden Lining*, is a desert photo that drifts between
 black-and-white and full color; a simple speed slider lets you set how fast that drift moves, or rest
 it on the full-color photo. Another, V4w.enko's *Perfect Everything*, is an ever-shifting pattern of
-concentric colored rings that fills the whole panel and drifts on its own. The supported collections live in the **Settings** tab, under
+concentric colored rings that fills the whole panel and drifts on its own. And Cinzia y Gabriel's *Pendulum* is a
+generative study of motion: a chain of colored orbs swings like a pendulum, tracing slow, ever-shifting arcs across the
+whole panel. The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
 their motion on or off, or set how fast it moves. This is new and **curated**: only collections that have been
 specifically added will work, so it won't read just any link yet.

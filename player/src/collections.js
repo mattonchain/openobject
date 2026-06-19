@@ -120,6 +120,27 @@ const REGISTRY = [
     animateDefault: false,
     animatable: false,
   },
+  {
+    slug: 'pendulum',
+    artist: 'Cinzia y Gabriel',
+    name: 'Pendulum',
+    chain: 'Tezos',
+    contract: 'KT1FxLAch681RsZ2UYoSNQ5S5xsgT6mFHwZq',
+    // Second Tezos collection, resolved exactly like Perfect Everything: no eth_call / tokenURI, so the
+    // token's FA2 metadata (artifactUri + displayUri) is read from the TzKT public indexer API off a
+    // swappable `tzkt` base. The same token_metadata big_map fallback applies (HANDOFF §20).
+    tzkt: 'https://api.tzkt.io',
+    // "Pendulum" is a small EditART series (editions #0..#2, all the same sketch); we enable just the
+    // owner's single piece, so the entry carries a fixedToken and the add flow skips the Token-ID prompt
+    // (still resolved on-chain for faithfulness), the single-piece shape used by Golden Lining.
+    fixedToken: '1',
+    // A self-contained p5.js EditART sketch (p5 inlined, no external assets) whose square canvas
+    // (min(w,h)) fills the 1:1 stage edge to edge: no crop, no aspect. The per-edition seed rides in the
+    // artifactUri query (m0..m4), the shared-bundle/Azulejo shape. draw() loops continuously on its own,
+    // so there is nothing to engage on load: no Animate control.
+    animateDefault: false,
+    animatable: false,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
