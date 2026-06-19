@@ -59,8 +59,9 @@ builder-only convenience.
 - **Storage: full local mirror by default.** Progressive sync: start the rotation on
   the first clip, fold the rest in without restarting/stuttering the loop. A
   buffered/least-recently-shown eviction mode is a documented seam, off by default.
-- **Source layer is a clean interface.** v1 ships **web upload** only. SMB pull and
-  the on-chain/NFT resolver are seams, **not built** in v1.
+- **Source layer is a clean interface.** v1 ships **web upload** and **Connected
+  Collections**, a curated on-chain/NFT resolver that is now a **core feature** (HANDOFF
+  §8). SMB pull and a general "paste any URL" resolver remain seams, **not built** in v1.
 - **Sleep Hours** (optional overnight blank/dim) is a v1 feature.
 
 ## Formats (v1)

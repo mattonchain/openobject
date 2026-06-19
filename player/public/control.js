@@ -53,7 +53,7 @@ const authPw = document.getElementById('authPw');
 const authMsg = document.getElementById('authMsg');
 const authCard = document.getElementById('authCard');
 
-// Connected artwork (experimental): entry button, add modal, and the Settings collections card.
+// Connected artwork: entry button, add modal, and the Settings collections card.
 const addConnectedBtn = document.getElementById('addConnected');
 const cxOverlay = document.getElementById('cxOverlay');
 const cxClose = document.getElementById('cxClose');
@@ -760,7 +760,7 @@ async function refresh() {
   await Promise.all([loadLibrary(), loadRotation()]);
 }
 
-// ── Connected collections (experimental) ────────────────────────────
+// ── Connected collections ────────────────────────────
 async function loadCollections() {
   try { collectionsList = await fetch('/api/collections').then((r) => r.json()); }
   catch { collectionsList = []; }
@@ -977,7 +977,7 @@ fileInput.addEventListener('change', () => { send(fileInput.files); fileInput.va
 );
 drop.addEventListener('drop', (e) => send(e.dataTransfer.files));
 
-// Connected artwork (experimental): entry button → modal; Token ID resolves on change/Enter.
+// Connected artwork: entry button → modal; Token ID resolves on change/Enter.
 addConnectedBtn.addEventListener('click', openConnected);
 cxClose.addEventListener('click', closeConnected);
 cxOverlay.addEventListener('click', (e) => { if (e.target === cxOverlay) closeConnected(); });

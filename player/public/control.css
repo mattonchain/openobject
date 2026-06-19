@@ -451,7 +451,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .auth-msg { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .login-box .auth-msg { color: var(--danger); }
 
-/* ── Connected artwork (experimental) ───────────────────────────────── */
+/* ── Connected artwork ──────────────────────────────────────────────── */
 /* Entry point under the dropzone — its own thing, understated. */
 .add-connected {
   display: flex; align-items: center; justify-content: center; gap: 8px;

@@ -30,7 +30,7 @@ A few honest caveats:
 
 What you get today: OpenObject makes the XXL a **highly effective, accessible digital frame**.
 Your own images and video, edge to edge, run from your phone. It is **not** a general blockchain or
-NFT reader, though it now has **experimental, curated support for a few specific collections** (see
+NFT reader, though it now has **curated support for a few specific collections** (see
 "Connected Collections" below). Beyond that, maybe more lands later, maybe not. **No promises.**
 
 > **No warranty.** OpenObject is provided as is, with no warranty of any kind. Installing it wipes
@@ -134,7 +134,7 @@ moves on when it's up.
 
 **Sound.** Always off. It's silent art on a wall.
 
-**Connected Collections** *(experimental)*. Some digital art isn't a file you can download, it's a
+**Connected Collections**. Some digital art isn't a file you can download, it's a
 generative or web-hosted piece. OpenObject can show a few **specific, supported collections** of this
 kind. On the **Library** tab, tap **Add connected artwork**, pick the collection, and enter your
 piece's **Token ID** (the number on the piece's page, for example OpenSea shows it as "Token #101").
@@ -146,7 +146,8 @@ its art network over the internet and animates non-stop, filling the whole panel
 because it's live, this one looks its best when the frame is online (the others play fully offline
 once they're added). One more, Juicy Julio's *Golden Lining*, is a desert photo that drifts between
 black-and-white and full color; a simple speed slider lets you set how fast that drift moves, or rest
-it on the full-color photo. The supported collections live in the **Settings** tab, under
+it on the full-color photo. Another, V4w.enko's *Perfect Everything*, is an ever-shifting pattern of
+concentric colored rings that fills the whole panel and drifts on its own. The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that move, turn
 their motion on or off, or set how fast it moves. This is new and **curated**: only collections that have been
 specifically added will work, so it won't read just any link yet.

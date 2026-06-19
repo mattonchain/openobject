@@ -1,6 +1,6 @@
 'use strict';
 
-// Connected collections (experimental) — the curated registry of supported web/on-chain art
+// Connected collections: the curated registry of supported web/on-chain art
 // collections, plus the add-time resolver and the local mirror of each collection's shared
 // render bundle.
 //
@@ -100,6 +100,26 @@ const REGISTRY = [
     // full-colour thumbnail (the master photo the sketch loads) instead, matching the rest state.
     thumbFromAnimationImage: true,
   },
+  {
+    slug: 'perfect-everything',
+    artist: 'V4w.enko',
+    name: 'Perfect Everything',
+    chain: 'Tezos',
+    contract: 'KT1AvGKGryeASE9PXbm345dgPUxVETDLx8qX',
+    // First Tezos collection, so the resolve trail differs from the Ethereum ones above: Tezos has no
+    // eth_call / tokenURI. We read the token's FA2 metadata (artifactUri + displayUri) from the TzKT
+    // public indexer API (one free GET, swappable like an `rpc`). If TzKT is ever unavailable, a
+    // refactor can read the contract's token_metadata big_map straight from a public Tezos RPC node
+    // instead (see HANDOFF §20); either way the official artifactUri is what we store verbatim.
+    tzkt: 'https://api.tzkt.io',
+    // A self-contained p5.js EditART sketch (p5 inlined, no external assets). The per-edition seed
+    // rides in the artifactUri query string (m0..m4), so the whole collection shares one bundle and
+    // the owner just enters their Token ID, same shape as Azulejo. The square canvas (min(w,h)) fills
+    // our square stage edge to edge (no crop, no aspect), and draw() loops continuously on its own, so
+    // there is nothing to engage on load: no Animate control.
+    animateDefault: false,
+    animatable: false,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
@@ -148,6 +168,29 @@ function firstImageUrl(html) {
   return u ? u[0] : null;
 }
 
+// Read a token's canonical metadata per chain, normalised to { meta, sourceUrl, image }.
+// Ethereum: tokenURI/uri(id) (above) → a metadata JSON carrying animation_url + image.
+// Tezos (FA2): no eth_call. Read the token's metadata from the TzKT public indexer API, which
+// surfaces the contract's own token_metadata (artifactUri + displayUri/thumbnailUri) in one free
+// GET. Swappable like an rpc; if TzKT is ever unavailable, a refactor can read the token_metadata
+// big_map straight from a public Tezos RPC node (HANDOFF §20). Either way the official URL is verbatim.
+async function readTokenMeta(c, tid) {
+  if (c.chain === 'Tezos') {
+    const url = `${c.tzkt}/v1/tokens?contract=${encodeURIComponent(c.contract)}&tokenId=${encodeURIComponent(tid)}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Tezos indexer returned ${r.status}.`);
+    const arr = await r.json();
+    const meta = (Array.isArray(arr) && arr[0] && arr[0].metadata) || null;
+    if (!meta) throw new Error('No such token (check the Token ID).');
+    return { meta, sourceUrl: meta.artifactUri, image: meta.displayUri || meta.thumbnailUri || null };
+  }
+  const metaUrl = await ethCallTokenURI(c, tid);                 // Ethereum → metadata location
+  const mr = await fetch(toHttp(metaUrl));                        // metadata may live on IPFS
+  if (!mr.ok) throw new Error(`Couldn't read the token metadata (${mr.status}).`);
+  const meta = await mr.json();
+  return { meta, sourceUrl: meta.animation_url, image: meta.image || null };
+}
+
 // Returns { tokenId, title, sourceUrl (verbatim official URL), image (preview, may be null) }.
 async function resolveToken(slug, tokenId) {
   const c = bySlug(slug);
@@ -155,13 +198,9 @@ async function resolveToken(slug, tokenId) {
   // fixedToken collections support exactly one piece, so the add flow need not send a Token ID.
   const tid = String((tokenId == null || tokenId === '') ? (c.fixedToken || '') : tokenId).trim();
   if (!/^\d+$/.test(tid)) throw new Error('Token ID must be a number.');
-  const metaUrl = await ethCallTokenURI(c, tid);                 // Ethereum → metadata location
-  const mr = await fetch(toHttp(metaUrl));                        // metadata may live on IPFS
-  if (!mr.ok) throw new Error(`Couldn't read the token metadata (${mr.status}).`);
-  const meta = await mr.json();
-  const sourceUrl = meta.animation_url;                          // the official long URL
+  const { meta, sourceUrl, image: previewImage } = await readTokenMeta(c, tid); // chain-aware read
   if (!sourceUrl) throw new Error('This token has no artwork URL in its metadata.');
-  let image = meta.image || null;
+  let image = previewImage;
   // Prefer the artwork's own image over a stylised official preview (e.g. Golden Lining's split
   // half-grey/half-colour `image`): pull the first image the bundle loads and use that instead.
   if (c.thumbFromAnimationImage) {
@@ -378,7 +417,8 @@ function setState(slug, patch) {
   return getState(slug);
 }
 
-// Sorted by artist, then collection (HANDOFF / design). Includes piece counts for the UI.
+// Sorted by collection name (the order shown in the Settings card and the add picker; control.js
+// renders in this server order). Includes piece counts for the UI.
 function list() {
   return REGISTRY
     .map((c) => {
@@ -394,7 +434,7 @@ function list() {
         pieces: db.countConnected(c.slug),
       };
     })
-    .sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 module.exports = { REGISTRY, COLLECTIONS_DIR, bySlug, resolveToken, mirrorBundle, removeBundle, cacheThumb, toDataUrl, getState, setState, list, isMirrored, liveRpcForPath };

@@ -84,7 +84,7 @@ app.use(express.static(PUBLIC_DIR));
 app.use('/assets', express.static(ASSETS_DIR));
 app.use('/uploads', express.static(db.UPLOADS_DIR));
 
-// Mirrored connected-art bundles (experimental, src/collections.js). Served same-origin so the
+// Mirrored connected-art bundles (src/collections.js). Served same-origin so the
 // art runs and the display can frame it; locked to our own resources, just allowing the inline
 // script/handlers these p5 sketches use. Stays open with a password set (it's kiosk content).
 // connect-src includes data:/blob: because p5's loadImage() fetches images these sketches build in
@@ -307,7 +307,7 @@ app.delete('/api/library/:id', (req, res) => {
   res.json({ deleted: row.id });
 });
 
-// ── Connected collections (experimental, src/collections.js) ─────────
+// ── Connected collections (src/collections.js) ─────────
 // The supported list is code; the owner curates which show (hide/unhide) and toggles animate.
 app.get('/api/collections', (_req, res) => res.json(collections.list()));
 

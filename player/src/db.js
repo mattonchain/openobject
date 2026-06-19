@@ -77,7 +77,7 @@ function initDb() {
     db.exec('UPDATE library SET position = id WHERE position IS NULL');
   }
 
-  // Connected artwork (experimental, src/collections.js): a Library row whose source is a
+  // Connected artwork (src/collections.js): a Library row whose source is a
   // hosted/on-chain URL rather than an uploaded file. kind='connected'; the official artwork URL
   // is stored verbatim in source_url, with a derived title (original_name) and cached thumbnail so
   // the card looks like any other piece. Columns added in place so older libraries upgrade cleanly.
