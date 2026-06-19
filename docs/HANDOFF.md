@@ -427,6 +427,8 @@ two tiers:
   provisioner re-run: `sudo bash /opt/openobject/installer/install.sh` (idempotent). When a change
   is Tier 2, call it out, otherwise a self-update alone silently no-ops it.
 
+**Planned: tell the owner when an update needs a reboot.** Today the owner is not told when an update is one of the reboot-requiring kind (a Tier-1 change to the display page or kiosk launcher, per the caveat above); they only find out if they happen to know the gotcha. The control panel's update view should surface it: when the fetched target's diff touches the display-facing files (`player/public/display.*`) or the kiosk launcher (`installer/kiosk/`), `updater.check()` sets a `requiresReboot` flag and the *What's in it* summary adds a short line the owner sees, e.g. "Reboot the frame after updating to finish applying this." Detected from `git diff --name-only <current>..<target>`, so it is automatic per update, not a manual tag. Not built yet. (Matt, 2026-06-18.)
+
 **Console access at the panel.** If the kiosk ever needs a shell at the frame itself, switch to a
 virtual terminal with **`Ctrl+Alt+Fn+F2`** and return to the art with **`Ctrl+Alt+F1`**. Both
 halves of the chord matter: cage is launched with `-s` so VT switching is allowed, and on a compact
