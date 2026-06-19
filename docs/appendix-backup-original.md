@@ -60,6 +60,6 @@ Ubuntu** instead of installing, and stop before wiping anything.
    the **`xxl-emmc.img`** file on the external drive.
 
 > This image is a **complete copy** of the original install, far more than the account
-> reset in the [White Walls appendix](appendix-whitewalls-reset.md). Store it somewhere
+> reset in the [original software reset appendix](appendix-original-reset.md). Store it somewhere
 > safe. There is no supported way to put it back, but with this image you at least keep the
 > original bytes.

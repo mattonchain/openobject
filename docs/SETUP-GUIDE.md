@@ -218,6 +218,6 @@ the frame up about it.
 ## Want the original software back?
 
 If you'd rather return to the original experience, see the
-**[White Walls reset appendix](appendix-whitewalls-reset.md)**. The most complete way to preserve
+**[original software reset appendix](appendix-original-reset.md)**. The most complete way to preserve
 the original is to **[back up its drive](appendix-backup-original.md)** before you install
 OpenObject (optional, capture-only).

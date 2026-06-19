@@ -340,7 +340,7 @@ OpenObject/
 ├─ docs/
 │  ├─ HANDOFF.md            ← this build spec (working doc; kept current)
 │  ├─ SETUP-GUIDE.md        ← casual-user guide (§16; kept current in tandem)
-│  └─ appendix-whitewalls-reset.md  ← original Android reset procedure (§18)
+│  └─ appendix-original-reset.md  ← original software reset procedure (§18)
 ├─ player/                  ← OpenObject stack (web server, control panel, display page, sync, etc.)
 ├─ installer/              ← bootable USB build
 ├─ assets/                  ← OpenObject mark, idle/boot screens

@@ -4,17 +4,17 @@
 
 # OpenObject
 
-Self-hosted replacement software for the **Infinite Objects XXL**, a 26-inch square digital
-art frame whose original solution has decayed. OpenObject wipes the frame's built-in mini PC
-and turns it into a clean, local art player you fully control. It shows your own images and
-videos, runs from a web page in any browser, and needs no outside service to keep going.
+A clean, local art player you fully control. Run your own images and video full screen on a Mac
+with an everyday monitor, or use it to revive a stranded **Infinite Objects XXL**, the 26-inch
+square art frame whose original solution decayed. OpenObject runs from a web page in any browser,
+depends on no outside service, and nothing expires. No cloud, no accounts, no subscription.
 
 **Website:** [openobject.io](https://openobject.io)
 
-> **Status: working on real hardware.** The web app (control panel and display) and a
-> Debian-based installer are built and verified on an actual XXL: the frame boots with no
-> desktop straight into the art, reachable at `http://openobject.local`. The source is
-> available for **noncommercial use** (see [License](#license)).
+> **Status: working today.** Set it up on a Mac in a few minutes, or revive a real frame. The web
+> app (control panel and display) and a Debian-based installer are built and verified on an actual
+> XXL, which boots with no desktop straight into the art at `http://openobject.local`. The source
+> is available for **noncommercial use** (see [License](#license)).
 
 ## Why
 
@@ -51,13 +51,18 @@ software reflash that brings the hardware back under your control, with two comm
 | Player | MeLE Quieter 3Q, Intel Celeron N5105 (x86-64), Wi-Fi plus Gigabit Ethernet |
 | Video path | Captive HDMI from the mini PC to the panel, untouched by the reflash |
 
+This hardware is only for reviving an actual frame. **No frame? You do not need any of it.** See [Get started](#get-started) to run OpenObject on a Mac and an everyday monitor.
+
 ## Get started
 
-- **Reviving a frame?** The **[Setup Guide](docs/SETUP-GUIDE.md)** walks the whole thing in
-  plain language. Builders can use **[installer/](installer/README.md)**, the bench runbook
-  (wipe the eMMC, install minimal Debian, run `install.sh`, boot into the kiosk).
-- **Just want to try the app on your computer?** Run `cd player && npm install && npm start`,
-  then open `http://localhost:3000/` (needs Node 22.5 or newer).
+Two ways in:
+
+- **No frame? Use your Mac as the display.** The **[Mac display guide](docs/MAC-DISPLAY-SETUP.md)**
+  turns your Mac and an everyday monitor into a full-screen art player, step by step in plain
+  language.
+- **Reviving an Infinite Objects XXL?** The **[Setup Guide](docs/SETUP-GUIDE.md)** walks the whole
+  revival in plain language. Builders can use **[installer/](installer/README.md)**, the bench
+  runbook (wipe the eMMC, install minimal Debian, run `install.sh`, boot into the kiosk).
 
 ## Repository layout
 
@@ -71,10 +76,11 @@ site/        the openobject.io landing page (static HTML, served via GitHub Page
 
 ## Documentation
 
+- **[Mac Display Guide](docs/MAC-DISPLAY-SETUP.md)**: run OpenObject on a Mac as the display, no frame needed.
 - **[Setup Guide](docs/SETUP-GUIDE.md)**: for owners reviving a unit (no engineering).
 - **[Handoff / Build Spec](docs/HANDOFF.md)**: the full engineering spec and decision log.
 - **[Installer runbook](installer/README.md)**: how the frame is provisioned.
-- **[White Walls reset appendix](docs/appendix-whitewalls-reset.md)**: restoring the original
+- **[Original software reset](docs/appendix-original-reset.md)**: returning the frame to the original
   software, for owners who want it back.
 
 ## License
@@ -88,14 +94,19 @@ it is deliberately **not** "open source" in the OSI sense. It is *source availab
 
 ## No warranty
 
-OpenObject is provided **as is**, with **no warranty of any kind**. Installing it **wipes your
-device**, and there is no supported way back. It may not work on your unit, it may stop working
-after an update or over time, and in the worst case it could leave your frame unusable. You take
-that risk yourself.
+OpenObject is provided **as is**, with **no warranty of any kind**. To the fullest extent permitted
+by law, the author is **not responsible** for what you do with OpenObject, for what it does or fails
+to do, or for any resulting damage, data loss, or other harm, and makes **no guarantee** that it
+works or will keep working.
 
-To the fullest extent permitted by law, the author is **not responsible** for what you do with
-OpenObject, for what it does or fails to do, or for any resulting damage, data loss, or other
-harm, and makes **no guarantee** that it works or will keep working.
+**Running it on your own computer** (a Mac, for example) is low risk. It is just an app you start
+and stop, kept in its own folder, and you can delete it whenever you like. It does not wipe or
+alter the rest of your machine.
+
+**Reviving an Infinite Objects frame is the part with real risk.** That path **wipes the frame's
+storage**, with no supported way back. It may not work on your exact unit, it may stop working
+after an update or over time, and in the worst case it could leave the frame unusable. You take
+that risk yourself.
 
 ## Independence and trademarks
 
