@@ -140,7 +140,7 @@ The display, control panel, and display-page are all **web-based and served by t
 
 **Render the display through Chromium in kiosk mode**, pointed at a local page that cycles the rotation. This is the deliberate architectural choice and it drives several requirements below.
 
-**Why the browser engine:** the owner's real-world library is a polyglot of formats, AVIF (incl. animated), animated WebP, GIF, PNG transparency, plus MP4/MOV/WebM. A browser engine decodes all of these natively with one renderer, and `fit`/`fill` plus video looping fall out of standard CSS/HTML. A native image viewer + separate video player would require bolting on a separate decoder for half these formats and special-casing the animated ones.
+**Why the browser engine:** the owner's real-world library is a polyglot of formats, AVIF (incl. animated), animated WebP, GIF, PNG transparency, SVG vector art (incl. SMIL/CSS animation), plus MP4/MOV/WebM. A browser engine decodes all of these natively with one renderer, and `fit`/`fill` plus video looping fall out of standard CSS/HTML. A native image viewer + separate video player would require bolting on a separate decoder for half these formats and special-casing the animated ones.
 
 **Supported formats (v1):**
 
@@ -148,9 +148,12 @@ The display, control panel, and display-page are all **web-based and served by t
 |---|---|---|
 | Stills | JPEG, PNG | Hold for set duration. PNG transparency renders against **black**. |
 | Animated | GIF, AVIF, WebP | Animate and **loop to fill** their set duration. **Never freeze on frame one.** |
+| Vector | SVG | Rendered as a **safe image** (its scripts and external references are never run). A clean `viewBox` scales and centers on the black stage; SMIL/CSS animation loops. |
 | Video | MP4, MOV, WebM | **Always loop.** "Full length" or fixed duration (see §7). No audio (§12). |
 
-**Explicitly ignored (v1):** HEIC, SVG (deferred, renders unpredictably at arbitrary canvas sizes), PSD, CR2 (raw), GLB (3D model), and all OS/working-file noise (`.DS_Store`, `.docx`, `.xlsx`, etc.). The player simply skips unsupported files, **no conversion step on ingest** (uploads stay byte-for-byte).
+**SVG, rendered as a safe image (added 2026-06-18, §20).** SVG art is served and shown as an `<img>`, the same path as the raster stills, so the browser **does not execute the file's scripts or fetch its external references**; the global CSP (`script-src 'self'`, no inline) blocks inline script even if the file is opened directly. Declarative **SMIL/CSS animation still plays** (it is not script), so animated SVGs loop. This is best-effort, not a generic guarantee: a well-formed SVG with a `viewBox` (the norm) scales and centers cleanly, but a file with no intrinsic size or one that relies on scripting may render unpredictably or sit static, the original reason it was deferred. Vetted, self-contained pieces are the intended use.
+
+**Explicitly ignored (v1):** HEIC, PSD, CR2 (raw), GLB (3D model), and all OS/working-file noise (`.DS_Store`, `.docx`, `.xlsx`, etc.). The player simply skips unsupported files, **no conversion step on ingest** (uploads stay byte-for-byte).
 
 **Display surface, edge-to-edge, no chrome.** The display page is a full-panel **black stage** (`100vw × 100vh`; zero margin, padding, border, scrollbars, or UI). Media renders to the **physical edges of the panel**; OpenObject adds **no decorative frame or border, ever**. In Fit mode the surrounding black is bare stage, not a frame.
 
@@ -181,7 +184,7 @@ Uploading **adds to the library**. A "daily refresh" habit is achieved by curati
 
 - A **single global duration** applies to **every** piece in the rotation, equal time per content piece. There is **no per-clip duration**.
 - **Stills** (JPEG/PNG) hold for the duration.
-- **Animated** (GIF/WebP/AVIF) and **video** (MP4/MOV/WebM) **loop to fill** the duration: a piece shorter than it repeats; a piece **longer** than it is cut off when the timer advances. **Video always loops; it never freezes on a last frame.**
+- **Animated** (GIF/WebP/AVIF/SVG) and **video** (MP4/MOV/WebM) **loop to fill** the duration: a piece shorter than it repeats; a piece **longer** than it is cut off when the timer advances. **Video always loops; it never freezes on a last frame.**
 - **Connected** (§8) pieces hold for the duration like any other piece; with **Animate** on, the piece's own motion runs continuously to fill it. The rotation times each piece's slot from when it actually appears on screen, not from when its render is kicked off (fixed 2026-06-17). This matters only for connected pieces: their generative sketch runs a heavy **synchronous** `generate()` inside a **same-origin** iframe, which briefly blocks the shared render thread (about 4 to 5 seconds on the frame's N5105). Timed from the render start, a connected piece was on screen for only *(duration minus generate time)*, roughly 7 to 8 seconds of a 12 second setting; the visible piece *before* it lingered by the same amount. Reveal-gated timing gives every piece its full on-screen duration. The "appears on screen" signal is the iframe's `load` event, which fires when `generate()` finishes; connected pieces therefore use a **long safety fallback** instead of the brief one files use (`render()` in display.js), because a 500ms fallback would win the race on a slow frame and start the clock mid-generate, the very thing this fixes (refined 2026-06-17). The unavoidable generate stall now lands between pieces (it freezes the outgoing piece for a beat, invisible when that piece is a still). A future option is to keep connected iframes warm so `generate()` runs once instead of on every appearance (§17).
 
 ---
@@ -463,7 +466,7 @@ Maintain **two** living documents as the build proceeds, not one written once an
 
 ## 17. Future enhancements (documented seams, not built in v1)
 
-- **On-chain / NFT source.** The marquee future feature. Reading on-chain art is a **resolution problem, not a display problem**: an NFT is a pointer (contract address + token ID) whose `tokenURI` → metadata → media URL resolves to a file, and that file is a **JPEG/PNG/GIF/MP4/AVIF the v1 display engine already handles**. Intended approach: a **resolver/connector API** (e.g. Alchemy, QuickNode, Reservoir, OpenSea) so the player does *not* run nodes, RPC endpoints, or IPFS gateways itself, connect once, the service returns a media URL, the player downloads it. This slots in as a **third source type** alongside web upload and pull-from-share; everything downstream (sync, library, rotation, pin, fit/fill, loop) is unchanged. **v1 action:** keep the source layer a clean interface so this is a plug-in later, not a teardown. Build none of it now.
+- **On-chain / NFT source.** The marquee future feature. Reading on-chain art is a **resolution problem, not a display problem**: an NFT is a pointer (contract address + token ID) whose `tokenURI` → metadata → media URL resolves to a file, and that file is a **JPEG/PNG/GIF/MP4/AVIF/SVG the v1 display engine already handles**. Intended approach: a **resolver/connector API** (e.g. Alchemy, QuickNode, Reservoir, OpenSea) so the player does *not* run nodes, RPC endpoints, or IPFS gateways itself, connect once, the service returns a media URL, the player downloads it. This slots in as a **third source type** alongside web upload and pull-from-share; everything downstream (sync, library, rotation, pin, fit/fill, loop) is unchanged. **v1 action:** keep the source layer a clean interface so this is a plug-in later, not a teardown. Build none of it now.
 - **Web / HTML art pieces (interactive & generative). BUILT 2026-06-16 as "Connected Collections" (§8, §20); experimental.** Some art is not a still or a clip but a **live web page**,
   a generative/interactive `index.html` (often Arweave/IPFS-hosted) that renders on a canvas
   and may expose its own controls. **First target use case:** Bryan Brinkman's *"Azulejo Galo"*
@@ -495,7 +498,7 @@ Maintain **two** living documents as the build proceeds, not one written once an
   on-chain/NFT source** above (that resolves a pointer to a *media file* the v1 engine already
   plays; this renders a *live page*). **Status: BUILT 2026-06-16** as Connected Collections (§8, §20). What shipped: the curated registry, add-by-Token-ID with on-chain `tokenURI` resolution to the official URL, a local mirror, the `connected` render kind in a sandboxed same-origin iframe, and per-collection Animate + Hide/Unhide. The earlier cross-origin / kiosk-only concern was solved by **mirroring + serving same-origin and injecting the animate hook**, so it runs in Phase 1, not only on the kiosk. **Still future:** a general "paste any hosted URL and name it yourself" path for non-registry pieces (the data model already allows it, with the collection left empty).
 - **Adjustable crop position** for Fill (e.g. keep the top of portraits). v1 is center-crop only.
-- **SVG support.** Trivial to add under the browser-render approach if wanted later; deferred because it renders unpredictably at arbitrary sizes.
+- **SVG support. BUILT 2026-06-18 (§6, §20).** Added as a supported upload, rendered as a safe `<img>` (its scripts and external references are not run); a well-formed SVG scales, centers, and keeps its SMIL/CSS animation. The old "renders unpredictably at arbitrary sizes" caveat now applies only to files without a clean `viewBox`.
 
 ---
 
@@ -528,6 +531,14 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-18: SVG supported as a normal upload (rendered as a safe image)
+Realizes the §17 "SVG support" seam (§6). SVG is now an accepted upload type, no longer skipped. Prompted by a specific piece the owner holds: *"The Vice City"* (token 31 of **TESSERACTS** by The Digital Asset Museum), a self-contained animated SVG on Arweave (800×800 `viewBox`, its own black background rect, 34 SMIL `<animate>` loops set to `repeatCount="indefinite"`, no script, no external references).
+- **Deliberately not a Connected Collection.** Connected Collections resolve and mirror a *pointer* (contract + token id → on-chain URL). This is a *file* the owner already has, so the honest path is the ordinary upload, not the curated registry. Decided after confirming it renders cleanly as a plain upload; the white space the owner saw was only a browser's page background around a fixed-size SVG opened as a top-level document, not part of the art (Matt, 2026-06-18).
+- **One-line engine change.** Added `svg` to `player/src/formats.js` (`format: svg`, `kind: animated`, `mime: image/svg+xml`); everything downstream already worked. The display renders any non-video/non-connected item as an `<img>` with `object-fit: contain` (the default Fit), which centers the square and scales it edge to edge on the 1:1 panel; the control-panel thumbnail uses the same `<img>`.
+- **Safe by default, no new policy.** Rendering as an `<img>` means the browser never runs the SVG's scripts or fetches its external references; the existing global CSP (`script-src 'self'`, no inline) neutralizes inline script even on a direct open, so no SVG-specific header was needed. Declarative SMIL/CSS is not script and keeps animating.
+- **Best-effort, not generic.** A clean `viewBox` (the norm) scales and centers well; a file with no intrinsic size or with script-driven motion may render oddly or sit static. Documented as such in §6; vetted, self-contained pieces are the intended use.
+- **Verified on Mac** (Phase 1): the file uploads (accepted, not skipped, stored byte-for-byte as `.svg`), folds into the rotation, and renders centered on pure black with its SMIL animation looping continuously, clean console. On the frame it arrives by the normal self-update with **no kiosk power-cycle** needed (only `formats.js` changed, no display/kiosk code), folding in on the usual poll.
 
 ### 2026-06-18: Documented frame serviceability (Tier-1/2 update model + console access) in §15
 Promoted two operating facts that were only in working notes into the spec, under §15 "Servicing

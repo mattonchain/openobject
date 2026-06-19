@@ -91,7 +91,7 @@ function render(layer, item, onReady) {
     el.src = '/uploads/' + item.filename;
     el.play().catch(() => {});
   } else {
-    el = document.createElement('img'); // stills + animated (GIF/WebP/AVIF) hold/loop
+    el = document.createElement('img'); // stills + animated (GIF/WebP/AVIF) + SVG (SMIL) hold/loop
     el.addEventListener('load', onReady, { once: true });
     el.addEventListener('error', onReady, { once: true });
     el.src = '/uploads/' + item.filename;

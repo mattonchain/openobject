@@ -55,7 +55,7 @@ function initDb() {
       filename      TEXT NOT NULL UNIQUE,        -- stored file on disk (UPLOADS_DIR)
       original_name TEXT NOT NULL,               -- name as uploaded, for display
       mime          TEXT,
-      format        TEXT NOT NULL,               -- jpeg|png|gif|avif|webp|mp4|mov|webm
+      format        TEXT NOT NULL,               -- jpeg|png|gif|avif|webp|svg|mp4|mov|webm
       kind          TEXT NOT NULL,               -- still|animated|video (drives behavior)
       bytes         INTEGER NOT NULL,
       width         INTEGER,

@@ -31,7 +31,7 @@ software reflash that brings the hardware back under your control, with two comm
 
 ## What it does (v1)
 
-- Displays **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**, edge to edge on the square panel,
+- Displays **JPEG, PNG, GIF, AVIF, WebP, SVG, MP4, MOV, WebM**, edge to edge on the square panel,
   with no frame and no border.
 - **Library, Rotation, and Pin.** Everything you upload is kept. You choose what plays and in
   what order (**Sequence** or **Shuffle**), and you can pin one piece to hold it permanently.

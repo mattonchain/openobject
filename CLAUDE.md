@@ -53,7 +53,7 @@ builder-only convenience.
 - **Rotation order: Sequence / Shuffle.** Sequence = the set order; Shuffle =
   randomized pass, each clip once before repeating, then reshuffles. (Pure independent
   Random was dropped, odd fit for a frame; Shuffle already covers random order.)
-- **Motion + audio: GIF/WebP/AVIF and video loop-to-fill; never freeze on frame 1.
+- **Motion + audio: GIF/WebP/AVIF/SVG and video loop-to-fill; never freeze on frame 1.
   Muted, always.** **One global equal-time duration** for every piece (no per-clip
   duration); a clip longer than it is cut at the duration, shorter loops to fill.
 - **Storage: full local mirror by default.** Progressive sync: start the rotation on
@@ -64,10 +64,11 @@ builder-only convenience.
 - **Sleep Hours** (optional overnight blank/dim) is a v1 feature.
 
 ## Formats (v1)
-Supported: **JPEG, PNG, GIF, AVIF, WebP, MP4, MOV, WebM**. PNG transparency renders
-against black. **Skip** (do not convert, do not error) everything else, HEIC, SVG,
-PSD, raw, GLB, and OS noise (`.DS_Store`, office files, etc.). Uploads stay
-byte-for-byte.
+Supported: **JPEG, PNG, GIF, AVIF, WebP, SVG, MP4, MOV, WebM**. PNG transparency renders
+against black. **SVG renders as a safe `<img>`** (its scripts/external refs never run; SMIL/CSS
+animation still loops; a clean `viewBox` scales and centers on black). **Skip** (do not convert,
+do not error) everything else, HEIC, PSD, raw, GLB, and OS noise (`.DS_Store`, office files,
+etc.). Uploads stay byte-for-byte.
 
 ## Branding
 The **OPEN / OBJECT** wordmark lives in `assets/branding/` (optimized opaque PNGs;
@@ -77,8 +78,8 @@ upscale rather than added detail) with **Potrace → `openobject-logo.svg`**, si
 transparent, so CSS recolors it white-on-dark (idle/boot screen) or black-on-light;
 derive transparent PNG exports from it as needed. A plain raster color-inverse is
 *not* the plan (Matt handles that in Photoshop if ever needed). **SVG here is a
-UI/brand asset only**, displayed user *art* in SVG stays deferred per §6. Aesthetic:
-understated, functional, no clutter.
+UI/brand asset**; displayed user *art* in SVG is now supported too, rendered as a safe
+image (see Formats / §6). Aesthetic: understated, functional, no clutter.
 
 ## Phases
 - **Phase 0**, repo, structure, docs, CLAUDE.md, GitHub. *(done)*
