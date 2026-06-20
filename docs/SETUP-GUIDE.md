@@ -149,7 +149,7 @@ because it's live, this one looks its best when the frame is online (the others 
 once they're added). One more, Juicy Julio's *Golden Lining*, is a desert photo that drifts between
 black-and-white and full color; a simple speed slider lets you set how fast that drift moves, or rest
 it on the full-color photo. Another, V4w.enko's *Perfect Everything*, is an ever-shifting pattern of
-concentric colored rings that fills the whole panel and drifts on its own. And Cinzia y Gabriel's *Pendulum* is a
+concentric colored rings that fills the whole panel and drifts on its own. The same artist's *Perfect Circles* is a companion series, slowly shifting concentric circles that fill the panel and drift on their own. And Cinzia y Gabriel's *Pendulum* is a
 generative study of motion: a chain of colored orbs swings like a pendulum, tracing slow, ever-shifting arcs across the
 whole panel. And Jeremy Booth's *Lost in Moffat County* is a series of painterly Western scenes that shift from day to
 night on their own with your local time; switch on Animate for that piece (in Settings) to reveal a hand-drawn animated

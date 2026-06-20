@@ -165,6 +165,21 @@ const REGISTRY = [
     // animation_url and is intentionally NOT supported here (it resolves with a clear "no artwork URL"
     // error); it can be added as a normal upload if ever wanted.
   },
+  {
+    slug: 'perfect-circles',
+    artist: 'V4w.enko',
+    name: 'Perfect Circles',
+    chain: 'Tezos',
+    contract: 'KT1RtgaTm3P35uNzrD2RZPtRwFVCKmjMUbUh',
+    // A second EditART series from the same artist as Perfect Everything, the same Tezos shape, so it
+    // reuses the Tezos branch in readTokenMeta with no new mechanics: TzKT resolves the FA2 metadata
+    // (artifactUri + displayUri), one shared p5 bundle carries the per-edition seed (m0..m4) in the
+    // query string (10 editions; the owner enters their Token ID), and the square self-looping canvas
+    // fills the 1:1 stage edge to edge. No crop/aspect, no Animate control.
+    tzkt: 'https://api.tzkt.io',
+    animateDefault: false,
+    animatable: false,
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
