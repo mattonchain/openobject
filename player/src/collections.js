@@ -250,8 +250,13 @@ const REGISTRY = [
       ],
     },
     choiceHook: 'snow',
-    // The three.js canvas sizes to the full viewport (camera aspect adapts), so it fills the 1:1 stage
-    // edge to edge — no crop, no aspect.
+    // The three.js scene is responsive (the camera aspect adapts to the viewport), so it has no inherent
+    // shape. The artist's declared media is ~square (804x760), but on the square frame a filled square reads
+    // as a cramped, stretched-looking crop of what is really a wide mountain vista, so we present it as a
+    // LANDSCAPE image: a 16:9 `aspect` letterboxes it on the bare stage (the Golden Lining / The Bloom
+    // pattern, HANDOFF §6) and the scene renders that wide vista undistorted. The snow hook also nudges a
+    // resize after load so a responsive WebGL canvas can't latch onto a stale (stretched) size at load.
+    aspect: '16 / 9',
   },
 ];
 
@@ -463,7 +468,9 @@ const BLOOM_HOOK = `
 // level from ?oochoice=N by calling that same onClick() N times once it exists — snowLevel starts at 0,
 // so N taps land on level N, the faithful equivalent of the artist's tap (snowLevel is a lexical `let`,
 // not a window property, so it can't be assigned directly; onClick is a global function, so it can be
-// called). We also hide the two on-screen overlays (the "tap to snow" prompt and the level pill): a
+// called). We also hide the two on-screen overlays (the "tap to snow" prompt and the level pill) and
+// nudge a resize after load (a responsive WebGL canvas can latch onto a stale iframe size and look
+// stretched; re-firing the artwork's own resize handler re-fits it to the final letterboxed box): a
 // passive frame can't tap, and the stage shows zero chrome (HANDOFF §6). Always injected; with no
 // ?oochoice (or 0) only the overlays are hidden and the artwork keeps its Light Snow default.
 const SNOW_HOOK = `
@@ -472,6 +479,10 @@ const SNOW_HOOK = `
   var s = document.createElement('style');
   s.textContent = '.info,.snow-level{display:none!important}';
   (document.head || document.documentElement).appendChild(s);
+  // Re-fit to the final iframe size a few times after layout settles (guards a stale-size stretch).
+  var refit = function(){ try { window.dispatchEvent(new Event('resize')); } catch (e) {} };
+  [0, 150, 500, 1200, 2500].forEach(function(t){ setTimeout(refit, t); });
+  window.addEventListener('load', refit);
   var n = parseInt(new URLSearchParams(location.search).get('oochoice'), 10);
   if (!(n > 0)) return;                                   // 0 / absent → the artwork's Light Snow default
   var tries = 0;
