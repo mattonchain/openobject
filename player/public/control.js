@@ -83,6 +83,7 @@ let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓
 let sleepRanges = []; // up to two daily blank windows (HANDOFF §13)
 let manualBlank = false; // instant "Blank screen" override
 let runningCommit = null; // the commit this player reports — used to detect the restart
+let updateNeedsReboot = false; // the offered update touches the kiosk display → frame reboot needed (HANDOFF §15)
 let collectionsList = []; // supported connected collections (from /api/collections)
 let collectionsBySlug = {}; // slug → collection, for connected card subtitles
 let cxSlug = null; // collection selected in the add-connected modal
@@ -556,10 +557,12 @@ async function checkUpdate() {
   const link = s.compareUrl
     ? `<a class="upd-link" href="${escapeHtml(s.compareUrl)}" target="_blank" rel="noopener">What’s new ↗</a>`
     : '';
+  updateNeedsReboot = !!s.requiresReboot; // remembered for after the restart (HANDOFF §15)
   setUpdStatus(
     `<div class="upd-headline">A newer version is available${when}</div>` +
       (list ? `<div class="upd-whats">What’s in it</div><ul class="upd-list">${list}</ul>` : '') +
       link +
+      (s.requiresReboot ? '<div class="upd-reboot">After updating, reboot the frame to finish applying the display changes.</div>' : '') +
       (s.dirty ? '<div class="upd-warn">Heads-up: local file changes are present on this frame.</div>' : '')
   );
   showApply(true);
@@ -747,9 +750,19 @@ async function waitForRestart(before) {
   checkUpdateBtn.disabled = false;
   if (h) {
     showApply(false);
-    setUpdStatus('<span class="upd-ok">✓</span> Updated — you’re now up to date.');
-    await refresh();
-    await loadUpdate(); // refreshes the version line to the new number · date · commit
+    if (updateNeedsReboot) {
+      // The display page changed, so the kiosk needs a frame reboot to reload it. Keep the reminder
+      // visible (Reboot is in the Power controls) rather than auto-reloading the panel away from it.
+      setUpdStatus('<span class="upd-ok">✓</span> Updated. Reboot the frame to finish applying the display changes — use Reboot in the Power controls below.');
+      await refresh();
+      await loadUpdate(); // refresh the version line to the new number · date · commit
+    } else {
+      // Reload so the new control-panel code actually shows: the assets revalidate on reload (served
+      // max-age=0 + ETag), so the browser fetches the new control.js/.css instead of the old in-memory
+      // copy. The page never reloading (only the version line did) is what made changes look missing.
+      setUpdStatus('<span class="upd-ok">✓</span> Updated — refreshing…');
+      setTimeout(() => location.reload(), 900);
+    }
   } else {
     setUpdStatus('The frame is taking longer than expected. It should come back on its own — reload this page in a moment.');
   }

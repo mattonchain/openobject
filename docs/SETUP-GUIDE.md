@@ -196,7 +196,10 @@ number and the date it's from).
 Tap **Check for updates**. If a newer version is available you'll see a short list of what's in it
 (plus a **What's new** link for the full details), then tap **Update & Restart**. The frame briefly
 shows the OpenObject screen and comes back on the new version, and **your art and settings are
-kept**. Updates only happen when you ask, nothing changes on its own, and the frame just needs to be
+kept**. The control panel then refreshes itself to the new version, so the changes show up right away.
+Once in a while an update changes the on-screen display itself; when it does, the list tells you, and
+you'll tap **Reboot** afterward to finish applying it.
+Updates only happen when you ask, nothing changes on its own, and the frame just needs to be
 online to check. Changes that don't run on the frame, like the docs or the website, won't appear
 here, so a check that finds only those simply says you're up to date. Not ready? **Not now**
 dismisses it.

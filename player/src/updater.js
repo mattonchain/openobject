@@ -201,6 +201,14 @@ function isAppRelevantPath(file) {
   return !cosmetic;
 }
 
+// Does this update need a frame REBOOT to fully apply? A self-update restarts the player and the
+// control panel reloads itself, but the kiosk Chromium keeps showing the old /display until the
+// device reboots. So a change to the display page (player/public/display.*) or the kiosk launcher
+// (installer/kiosk/) is the reboot-requiring kind; the update view surfaces it (HANDOFF §15).
+function isKioskFacingPath(file) {
+  return /^player\/public\/display\./.test(file) || file.startsWith('installer/kiosk/');
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 // Instant, no-network status for page load: what we're running + the channel. Offline-safe.
@@ -261,6 +269,8 @@ async function check() {
     cosmeticOnly: behind > 0 && !appRelevant,
     canFastForward,
     diverged: ahead > 0,
+    // True when the owner must reboot the frame after updating to reload the kiosk display (HANDOFF §15).
+    requiresReboot: updateAvailable && files.some(isKioskFacingPath),
     subjects: updateAvailable ? await incomingSubjects(target.ref) : [],
     // Link "What's new" to the exact diff on GitHub (current → target), for the curious.
     compareUrl:
@@ -333,6 +343,7 @@ module.exports = {
   getChannel,
   setChannel,
   isAppRelevantPath,
+  isKioskFacingPath,
   localStatus,
   check,
   apply,
