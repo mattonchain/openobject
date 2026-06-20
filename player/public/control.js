@@ -144,18 +144,20 @@ function card(item) {
   const isPinned = item.id === pinnedId;
   const inRot = !!item.in_rotation;
   const connected = item.kind === 'connected';
-  // Connected pieces: a "Connected" badge instead of a format chip, "by <Artist>" as the subtitle,
-  // and no Fit/Fill (each collection's bundle sizes itself; render is decided per collection in code).
-  // Otherwise a normal media card.
+  // Connected pieces: a "Connected" badge instead of a format chip, "by <Artist>" as the subtitle.
+  // Most have no Fit/Fill (each collection's bundle sizes itself; render is decided per collection in
+  // code), but a collection may opt in with `fitFill` (the Chromie Squiggle does), so its card shows the
+  // toggle like a file. Otherwise a normal media card.
   const badge = connected ? '<span class="badge badge-connected">Connected</span>' : `<span class="badge">${item.format}</span>`;
   // Connected pieces show the artist's name as the subtitle (the official title may or may not embed
   // it: Brinkman's does, Kittoe's doesn't). Files show their size.
   const artistName = (collectionsBySlug[item.collection] || {}).artist || '';
   const sub = connected ? escapeHtml(artistName) : fmtBytes(item.bytes);
-  const fitBtn = connected ? '' : `<button class="fit" aria-pressed="${isFill}" title="How this piece fills the square">${isFill ? 'Fill' : 'Fit'}</button>`;
+  const canFit = !connected || !!(collectionsBySlug[item.collection] || {}).fitFill;
+  const fitBtn = canFit ? `<button class="fit" aria-pressed="${isFill}" title="How this piece fills the screen">${isFill ? 'Fill' : 'Fit'}</button>` : '';
   const cs = connected ? thumbCropScale(item.collection) : 0; // crop the thumbnail to match the cropped display
   el.innerHTML = `
-    <div class="thumb fit-${!connected && isFill ? 'fill' : 'fit'}${cs ? ' crop' : ''}">
+    <div class="thumb fit-${canFit && isFill ? 'fill' : 'fit'}${cs ? ' crop' : ''}">
       ${thumbTag(item)}
       ${badge}
       <button class="rot-toggle${inRot ? ' on' : ''}" aria-pressed="${inRot}"
@@ -795,34 +797,44 @@ function renderConnectedCard() {
   connectedList.replaceChildren(...collectionsList.map((c) => {
     const row = document.createElement('div');
     row.className = 'cc-row' + (c.hidden ? ' is-hidden' : '');
-    // The motion control depends on the collection: a choice piece (one with a curated set of modes)
-    // gets a dropdown; a speedControl piece (one we auto-animate at a chosen pace) gets a 0–10 slider,
-    // 0 = still; an Animate-on-load piece gets the on/off switch; a collection with no motion to engage
-    // (a time-aware still, animatable:false) gets none.
-    let motionCtl = '';
+    // A collection's controls, rendered in order. These are no longer mutually exclusive: the Chromie
+    // Squiggle carries both a 0–10 speed slider (0 = still) and a Background dropdown, shown in that order.
+    // A speedControl piece (auto-animated at a chosen pace) gets the slider; a choice piece (a curated set
+    // of modes, e.g. the squiggle's White/Black background) gets a dropdown; an Animate-on-load piece (with
+    // no speed/choice) gets the on/off switch; a time-aware still (animatable:false) gets none.
+    const ctls = [];
+    if (c.speedControl) {
+      const v = c.speed == null ? 0 : c.speed;
+      ctls.push(`<span class="cc-speed">
+        <span class="cc-speed-label">Motion <span class="cc-speed-val">${v === 0 ? 'Off' : v}</span></span>
+        <input class="cc-speed-range" type="range" min="0" max="${c.speedMax || 10}" step="1" value="${v}" aria-label="Motion speed for ${escapeHtml(c.name)}">
+      </span>`);
+    }
     if (c.choice) {
       const opts = c.choice.options
         .map((o) => `<option value="${escapeHtml(o.value)}"${String(o.value) === String(c.choice.value) ? ' selected' : ''}>${escapeHtml(o.label)}</option>`)
         .join('');
-      motionCtl = `<span class="cc-choice">
+      ctls.push(`<span class="cc-choice">
         <span class="cc-choice-label">${escapeHtml(c.choice.label)}</span>
         <select class="cc-choice-select" aria-label="${escapeHtml(c.choice.label)} for ${escapeHtml(c.name)}">${opts}</select>
-      </span>`;
-    } else if (c.speedControl) {
-      const v = c.speed == null ? 0 : c.speed;
-      motionCtl = `<span class="cc-speed">
-        <span class="cc-speed-label">Motion <span class="cc-speed-val">${v === 0 ? 'Off' : v}</span></span>
-        <input class="cc-speed-range" type="range" min="0" max="${c.speedMax || 10}" step="1" value="${v}" aria-label="Motion speed for ${escapeHtml(c.name)}">
-      </span>`;
-    } else if (c.animatable !== false) {
-      motionCtl = `<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`;
+      </span>`);
     }
+    if (c.animatable !== false) {
+      ctls.push(`<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`);
+    }
+    const motionCtl = ctls.join('');
+    // A multi-control collection (only the Chromie Squiggle so far: a speed slider plus a background
+    // dropdown) is marked `cc-multi`. The name and Hide stay on row 1, right-anchored exactly like every
+    // other collection, and CSS drops the controls (wrapped in `.cc-controls`) to a right-aligned row 2,
+    // because the long name leaves no room for them beside it. Single-control rows render exactly as before
+    // (the one control sits inline before Hide; an empty `.cc-controls` collapses away).
+    if (ctls.length > 1) row.classList.add('cc-multi');
     row.innerHTML = `
       <span class="cc-meta">
         <span class="cc-name">${escapeHtml(c.name)}</span>
         <span class="cc-sub">by ${escapeHtml(c.artist)} · ${c.pieces} piece${c.pieces === 1 ? '' : 's'}</span>
       </span>
-      ${motionCtl}
+      <span class="cc-controls">${motionCtl}</span>
       <button class="cc-hide">${c.hidden ? 'Unhide' : 'Hide'}</button>`;
     const sw = row.querySelector('.cc-switch');
     if (sw) sw.addEventListener('click', () => patchCollection(c.slug, { animate: !c.animate }));

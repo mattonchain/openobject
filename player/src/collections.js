@@ -262,6 +262,62 @@ const REGISTRY = [
     // resize after load so a responsive WebGL canvas can't latch onto a stale (stretched) size at load.
     aspect: '16 / 9',
   },
+  {
+    slug: 'chromie-squiggle',
+    artist: 'Erick Calderon (Snowfro)',
+    name: 'Chromie Squiggle',
+    chain: 'Ethereum',
+    contract: '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a',
+    rpc: 'https://ethereum-rpc.publicnode.com',
+    // The OG Art Blocks piece: project 0 on the platform's shared Core contract. That one contract hosts
+    // hundreds of unrelated projects, so a raw Token ID could resolve a completely different artwork; we
+    // accept the whole Chromie Squiggle SERIES but pin resolution to project 0 (requireProject): any
+    // Squiggle's Token ID works, a non-Squiggle id on this contract is rejected. (Unlike code-art / The
+    // Bloom, which pin one piece on a grab-bag contract, the Squiggles are a real ~10k seeded series, so
+    // the owner enters their own Token ID; cf. the Pendulum lesson, don't fixedToken a true series.)
+    requireProject: '0',
+    // Each token's generator HTML inlines that token's own hash (token id in the path, no query seed), so
+    // each token mirrors its own bundle (perToken), like send/receive. But unlike send/receive the squiggle
+    // reads no live on-chain state: it is fully deterministic from the inlined hash, so once p5 is localized
+    // it plays entirely offline (no liveRpc).
+    perToken: true,
+    // The only external asset is p5.js 1.0.0 by absolute cdnjs URL; localize it into the bundle so the piece
+    // renders with no network (the Golden Lining / Lost in Moffat County mechanism).
+    localizeAbsolute: true,
+    // Animation is a SPEED control, not on/off: the sketch starts static (loops=false) and cycles the
+    // squiggle's colour each frame only while loops is true, at a rate the artist drives with the arrow
+    // keys (a global `speed`, ~0.1..20). We surface that as a 0..10 motion speed (Golden Lining's slider):
+    // 0 freezes it (the as-minted still), 1..10 set the colour-cycle pace. The default 1 matches the
+    // official piece's own `speed` (its gentle click-to-animate pace), so it looks right out of the box. A
+    // dedicated hook drives the sketch's own `loops` and `speed` (both reachable as shared top-level
+    // bindings from an injected classic script). The 0 = off point covers the on/off, so there is no
+    // separate Animate switch.
+    speedControl: true,
+    speedDefault: 1,
+    speedHook: 'squiggle',
+    // The metadata declares aspect_ratio 1.5 and the sketch locks its canvas to 3:2. By default the piece
+    // is shown faithfully at 3:2 (Fit), letterboxed on the bare black stage on its white field, the
+    // canonical Art Blocks look (the Golden Lining pattern, HANDOFF §6). This is the one connected piece
+    // that also offers a per-piece Fit/Fill toggle: Fill covers the stage and centre-crops the 3:2 instead
+    // of letterboxing it (Matt's call, 2026-06-20). Fit/Fill stays off for every other connected
+    // collection (their bundles size themselves).
+    aspect: '3 / 2',
+    fitFill: true,
+    // The artist draws the background from his own `backgroundArray` (20 shades, white..black), cycled by
+    // spacebar. We expose just the two endpoints as a Background choice (a dropdown): White (index 0, the
+    // default and canonical field) or Black (index 10). The combined squiggle hook sets `backgroundIndex`
+    // from ?oochoice. No `choiceHook` here: that one hook applies both the speed and the background, which
+    // makes the squiggle the first connected piece to carry more than one control (speed + background, plus
+    // the Fit/Fill on its card).
+    choice: {
+      label: 'Background',
+      default: '0',
+      options: [
+        { value: '0', label: 'White' },
+        { value: '10', label: 'Black' },
+      ],
+    },
+  },
 ];
 
 const bySlug = (slug) => REGISTRY.find((c) => c.slug === slug) || null;
@@ -367,6 +423,14 @@ async function resolveToken(slug, tokenId) {
   const tid = String((tokenId == null || tokenId === '') ? (c.fixedToken || '') : tokenId).trim();
   if (!/^\d+$/.test(tid)) throw new Error('Token ID must be a number.');
   const { meta, sourceUrl, image: previewImage } = await readTokenMeta(c, tid); // chain-aware read
+  // Shared platform contracts (e.g. the Art Blocks Core contract) host many unrelated projects under one
+  // contract address. requireProject pins resolution to a single project (Chromie Squiggle = Art Blocks
+  // project 0) so a Token ID from a different project on the same contract is rejected here rather than
+  // mirrored under the wrong collection. Art Blocks metadata carries project_id; collections without it
+  // (Tezos, single-project contracts) leave requireProject unset and are unaffected.
+  if (c.requireProject != null && String(meta.project_id) !== String(c.requireProject)) {
+    throw new Error(`That Token ID isn't a ${c.name}. Enter a ${c.name}'s Token ID.`);
+  }
   if (!sourceUrl) throw new Error('This token has no artwork URL in its metadata.');
   let image = previewImage;
   // Prefer the artwork's own image over a stylised official preview (e.g. Golden Lining's split
@@ -519,6 +583,35 @@ const SNOW_HOOK = `
 })();
 </script>`;
 
+// Injected into Erick Calderon's "Chromie Squiggle" (Art Blocks project 0). The sketch exposes three
+// globals we curate, all top-level `let` bindings that a classic script injected into the same document
+// can set directly: `loops` (colour cycle on/off, the artist's click), `speed` (cycle rate, the artist's
+// arrow keys), and `backgroundIndex` (which entry of his white..black `backgroundArray` to paint, the
+// artist's spacebar). This one combined hook applies both of the squiggle's controls at display time:
+//   • ?oospeed=N (0..10 motion speed): 0 freezes the piece (loops off, the as-minted still), 1..10 turn the
+//     colour loop on and set its pace, mapped straight onto the artist's own `speed` (default 1 = original).
+//   • ?oochoice=N (Background): set `backgroundIndex` to the chosen entry (0 = White, 10 = Black).
+// Applied once setup() has created the canvas (so the bindings are initialised, no temporal-dead-zone); a
+// param left out leaves that global untouched.
+const SQUIGGLE_HOOK = `
+<script>
+(function(){
+  var qs = new URLSearchParams(location.search);
+  var sp = parseFloat(qs.get('oospeed'));
+  var bg = parseInt(qs.get('oochoice'), 10);
+  var n = 0;
+  var iv = setInterval(function(){
+    if (++n > 300) { clearInterval(iv); return; }   // ~30s safety
+    if (!document.querySelector('canvas')) return;  // setup() ran → globals are initialised
+    clearInterval(iv);
+    try {
+      if (!isNaN(sp)) { sp = Math.max(0, Math.min(10, sp)); if (sp <= 0) { loops = false; } else { loops = true; speed = sp; } }
+      if (!isNaN(bg)) { backgroundIndex = bg; }
+    } catch (e) {}
+  }, 100);
+})();
+</script>`;
+
 async function fetchBuf(url) {
   const r = await ooFetch(toHttp(url));
   if (!r.ok) throw new Error(`fetch ${url} → ${r.status}`);
@@ -621,13 +714,15 @@ async function mirrorInto(c, out, sourceUrl) {
   }
 
   // Inject the matching hook (engaged by ?oochoice / ?ooanim / ?oospeed at display time): a choice
-  // collection gets its own control hook (snow → set the level + hide overlays); an easterEgg collection
-  // gets the overlay-toggle hook; a speedControl collection gets the cosine sweep; other Animate-control
-  // pieces get the fire-once hook. Self-animating / still pieces (Kittoe, send/receive) get none, verbatim.
+  // collection gets its own control hook (snow → set the level + hide overlays); a bloom/easterEgg
+  // collection fires the artist's own handler once (start the bloom / toggle the easter egg); a
+  // speedControl collection gets a cosine sweep (Golden Lining) or, for the squiggle, the combined squiggle
+  // hook (which drives its loops/speed AND its background from the display params); other Animate-control
+  // pieces get the generic fire-once hook. Self-animating / still pieces (Kittoe, send/receive) get none.
   const hook = c && c.choiceHook === 'snow' ? SNOW_HOOK
     : c && c.animateHook === 'bloom' ? BLOOM_HOOK
     : c && c.animateHook === 'easterEgg' ? EASTER_HOOK
-    : c && c.speedControl ? SPEED_HOOK
+    : c && c.speedControl ? (c.speedHook === 'squiggle' ? SQUIGGLE_HOOK : SPEED_HOOK)
     : (c && c.animatable !== false ? ANIMATE_HOOK : '');
   if (hook) html = html.includes('</body>') ? html.replace('</body>', hook + '\n</body>') : html + hook;
   fs.mkdirSync(out, { recursive: true });
@@ -705,6 +800,9 @@ function list() {
         // supportedTokens subset (e.g. Lost in Moffat County's 3,4,5,6), or null for open collections (no hint).
         supportedTokens: c.supportedTokens ? c.supportedTokens.map(String) : (c.fixedToken ? [String(c.fixedToken)] : null),
         crop: c.crop || null, aspect: c.aspect || null,
+        // Whether this connected collection offers a per-piece Fit/Fill toggle (off for all but the
+        // squiggle); control.js shows the Fit/Fill button on its Library card only when set.
+        fitFill: !!c.fitFill,
         pieces: db.countConnected(c.slug),
       };
     })

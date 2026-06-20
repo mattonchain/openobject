@@ -159,6 +159,11 @@ easter egg. And Chaz Wesley's *The Bloom* is a hand-drawn flower garden that blo
 spaceship drifting through the sky above it. And NFTman76's *Binary Mountains* is a glowing wireframe
 mountain range under a starry sky, with snow drifting down as the view slowly circles it; a **Snow**
 setting (in Settings) lets you choose how heavy the snowfall is, from Light Snow to a full Blizzard.
+And Erick Calderon (Snowfro)'s *Chromie Squiggle* is the original Art Blocks artwork: a bright,
+ribbon-like squiggle of shifting colors on a clean white background. A speed slider (in Settings) sets how
+fast its colors flow, starting at the original's gentle pace, turned up to lively, or held still; you can
+switch its background between **White** (the original) and **Black**; and on its card you can choose
+**Fit** to show the whole squiggle or **Fill** to enlarge it to fill the screen, trimming the edges.
 The supported collections live in the **Settings** tab, under
 **Connected Collections**, where you can hide ones you don't own and, for collections that have something to
 adjust, turn their motion on or off, set how fast it moves, or choose a setting like the snowfall. This is new and **curated**: only collections that have been

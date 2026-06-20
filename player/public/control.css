@@ -504,6 +504,14 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .cc-row.is-hidden { opacity: 0.5; }
 .cc-art { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex: none; background: #000; }
 .cc-meta { flex: 1; min-width: 0; }
+.cc-controls { display: flex; align-items: center; gap: 12px; flex: none; }
+.cc-controls:empty { display: none; }   /* a collection with no motion control adds no empty gap */
+/* A multi-control collection (only the Chromie Squiggle) keeps its name and Hide on row 1, right-anchored
+   exactly like a single-control collection, and drops the controls to a right-aligned row 2, because the
+   long name leaves no room for them beside it. Scoped to .cc-multi: the controls group is ordered after
+   Hide and given a full-width basis, so it wraps onto its own line, right-aligned. Other rows untouched. */
+.cc-row.cc-multi { flex-wrap: wrap; row-gap: 10px; }
+.cc-row.cc-multi .cc-controls { order: 1; flex: 1 1 100%; justify-content: flex-end; }
 .cc-name { font-size: 14px; }
 .cc-sub { font-size: 12px; color: var(--muted); }
 .cc-animate { display: flex; align-items: center; gap: 8px; flex: none; color: var(--muted); font-size: 12px; }

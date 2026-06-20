@@ -89,6 +89,26 @@ body {
   aspect-ratio: var(--ar);
 }
 
+/* Fill on an aspect connected piece that opts in (per-collection `fitFill`, e.g. the Chromie Squiggle):
+   instead of letterboxing the declared ratio (Fit, above), cover the stage and centre-crop the overflow,
+   the iframe equivalent of object-fit: cover. The iframe keeps its --ar but is sized to the smallest such
+   box that still covers the stage (min 100% on both axes), centred, and the layer clips the overflow.
+   The art inside fills the iframe, so it reaches every edge with its top/bottom (or sides) cropped. */
+.layer.aspect.fit-fill { overflow: hidden; }
+.layer.aspect.fit-fill iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  min-width: 100%;
+  min-height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: var(--ar);
+}
+
 /* Fit = whole piece, original aspect, black fills the rest. Fill = cover, center-crop. */
 .fit-fit  img, .fit-fit  video { object-fit: contain; }
 .fit-fill img, .fit-fill video { object-fit: cover; object-position: center; }

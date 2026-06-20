@@ -40,7 +40,7 @@ let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HA
 let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
 
 const sig = (item) => item.kind === 'connected'
-  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0) + '|' + (item.speed == null ? '' : item.speed) + '|' + (item.rpcUrl || '')
+  ? 'c|' + item.collection + '|' + item.source_url + '|' + (item.animate ? 1 : 0) + '|' + (item.speed == null ? '' : item.speed) + '|' + (item.rpcUrl || '') + '|' + item.fit
   : item.fit + '|' + item.filename;
 const once = (fn) => {
   let done = false;
