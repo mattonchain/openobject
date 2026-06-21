@@ -823,12 +823,9 @@ function renderConnectedCard() {
       ctls.push(`<span class="cc-animate">Animate <button class="cc-switch${c.animate ? ' on' : ''}" role="switch" aria-checked="${c.animate}" aria-label="Animate ${escapeHtml(c.name)}"></button></span>`);
     }
     const motionCtl = ctls.join('');
-    // A multi-control collection (only the Chromie Squiggle so far: a speed slider plus a background
-    // dropdown) is marked `cc-multi`. The name and Hide stay on row 1, right-anchored exactly like every
-    // other collection, and CSS drops the controls (wrapped in `.cc-controls`) to a right-aligned row 2,
-    // because the long name leaves no room for them beside it. Single-control rows render exactly as before
-    // (the one control sits inline before Hide; an empty `.cc-controls` collapses away).
-    if (ctls.length > 1) row.classList.add('cc-multi');
+    // The controls (one or several) wrap in `.cc-controls`; control.css lays them out by screen width, not
+    // by count — inline beside the name on a wide panel, dropped to their own right-aligned row 2 on a
+    // narrow one (phones) so a long name keeps the full width. An empty `.cc-controls` collapses away.
     row.innerHTML = `
       <span class="cc-meta">
         <span class="cc-name">${escapeHtml(c.name)}</span>

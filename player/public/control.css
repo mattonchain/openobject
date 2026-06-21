@@ -500,18 +500,23 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .cc-unhide { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
 .cc-unhide:hover { color: var(--text); }
 .cc-list { margin-top: 6px; }
-.cc-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.cc-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; row-gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
 .cc-row.is-hidden { opacity: 0.5; }
 .cc-art { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex: none; background: #000; }
 .cc-meta { flex: 1; min-width: 0; }
-.cc-controls { display: flex; align-items: center; gap: 12px; flex: none; }
-.cc-controls:empty { display: none; }   /* a collection with no motion control adds no empty gap */
-/* A multi-control collection (only the Chromie Squiggle) keeps its name and Hide on row 1, right-anchored
-   exactly like a single-control collection, and drops the controls to a right-aligned row 2, because the
-   long name leaves no room for them beside it. Scoped to .cc-multi: the controls group is ordered after
-   Hide and given a full-width basis, so it wraps onto its own line, right-aligned. Other rows untouched. */
-.cc-row.cc-multi { flex-wrap: wrap; row-gap: 10px; }
-.cc-row.cc-multi .cc-controls { order: 1; flex: 1 1 100%; justify-content: flex-end; }
+/* Controls layout responds to screen width, not control count. Narrow (phones, the default here): every
+   collection's controls drop to their own right-aligned row 2, so its name keeps the full width on row 1
+   (with Hide) instead of being squeezed into a sliver beside an inline control. A collection with no
+   controls hides the empty wrapper, leaving a plain name + Hide row. The inner flex-wrap lets a wide
+   control group (the Chromie Squiggle's slider + dropdown) split across lines on a very narrow phone. */
+.cc-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; order: 1; flex: 1 1 100%; justify-content: flex-end; }
+.cc-controls:empty { display: none; }
+/* Wide enough to fit a row on one line (laptops/desktops; the panel itself caps at 980px): the controls sit
+   inline beside the name, before Hide. 860px clears the widest row (the Chromie Squiggle's slider + dropdown
+   need ~720px of content); narrower rows had room sooner but stack until here too, so every row flips as one. */
+@media (min-width: 860px) {
+  .cc-controls { order: 0; flex: none; justify-content: flex-start; }
+}
 .cc-name { font-size: 14px; }
 .cc-sub { font-size: 12px; color: var(--muted); }
 .cc-animate { display: flex; align-items: center; gap: 8px; flex: none; color: var(--muted); font-size: 12px; }
