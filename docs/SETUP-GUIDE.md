@@ -143,7 +143,9 @@ piece's **Token ID** (the number on the piece's page, for example OpenSea shows 
 For collections that only cover certain pieces, the add screen lists the **Supported Token IDs**, so you
 know which numbers will work before you type one.
 OpenObject looks up the real artwork, downloads it to the frame so it plays offline, and adds it as a
-normal piece you can put in the Rotation or Pin like any other. Some connected pieces even change
+normal piece you can put in the Rotation or Pin like any other. If a connected piece ever looks wrong,
+for example right after a software update, just remove it from the Library and add it again, that
+rebuilds its downloaded copy from scratch. Some connected pieces even change
 through the day on their own, for example one shifts from daytime colors to moonlit tones at night,
 following your frame's local time. Another, Snowfro's *send/receive*, is a living piece that reads
 its art network over the internet and animates non-stop, filling the whole panel edge to edge;

@@ -642,17 +642,23 @@ function extFor(ct, buf) {
   return '';
 }
 
-// Mirror a piece's bundle, cleaning up a half-built dir if any fetch fails so a retry starts fresh.
+// Mirror a piece's bundle. An add ALWAYS re-mirrors (no skip-if-already-present shortcut), so a render
+// fix to the mirror step (the hooks, the hideSelectors overlay-hide, dropScripts) reaches an existing
+// bundle just by removing and re-adding the piece, instead of silently reusing a stale copy. mirrorInto
+// overwrites in place and writes index.html last, so a live shared-collection sibling never sees a
+// missing bundle, and mirrorBundle is only ever called from the add flow (never on boot), so the
+// re-fetch is bounded to an explicit add.
 async function mirrorBundle(slug, sourceUrl, tokenId) {
   const c = bySlug(slug);
   const out = outDir(slug, tokenId);                                         // per-token dir, or the shared bundle
-  if (fs.existsSync(path.join(out, 'index.html'))) return;                   // already mirrored
+  const existed = fs.existsSync(path.join(out, 'index.html'));              // re-adding over an existing bundle?
   try {
     await mirrorInto(c, out, sourceUrl);
   } catch (e) {
-    // A fetch timed out or the source died mid-mirror: drop the partial dir so the next add is clean
-    // (index.html is written last, so a leftover dir without it would just be dead weight anyway).
-    fs.rmSync(out, { recursive: true, force: true });
+    // A fetch timed out or the source died mid-mirror. Only drop a brand-new dir, so its retry starts
+    // clean; an existing bundle is left intact (its old copy still plays), so a failed re-mirror can
+    // never destroy a working piece (index.html is written last, so a kept dir still has a valid one).
+    if (!existed) fs.rmSync(out, { recursive: true, force: true });
     throw e;
   }
 }
