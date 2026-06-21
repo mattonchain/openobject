@@ -39,7 +39,7 @@ software reflash that brings the hardware back under your control, with two comm
   or **Fill** (crop to fill the square).
 - **Animated art and video always loop** to fill their time and never freeze on the first
   frame. Silent by design.
-- **Sleep hours** to blank the panel overnight.
+- **Sleep Schedule** to blank the panel on a schedule, by time of day and day of week.
 - Add art by **dragging files onto the control panel** from any device. No accounts, no cloud.
 - **Connected Collections.** Beyond your own files, show a curated handful of generative and
   on-chain artworks, like a p5.js sketch that renders itself live in the frame rather than a saved
