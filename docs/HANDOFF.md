@@ -324,8 +324,10 @@ A **week-at-a-glance strip** under the windows draws one 24-hour bar per day, fi
 screen sleeps, with a marker at "now". It makes the schedule **verifiable by eye**, so an
 overnight window cannot be silently attached to the wrong day. The card header shows a live
 status: **"Sleeping until 7:00am"** while asleep, or **"Awake until 10:00pm"** otherwise. The
-Sleep Schedule and Connected Collections cards (the two Settings lists that can grow) are
-**collapsible** from their headers; the other Settings cards are not. Strip positions are set
+Sleep Schedule and Connected Collections cards (the lists that can grow), plus the
+infrequently-used Password and Wi-Fi cards, are **collapsible** from their headers and **start
+closed** to keep the tab short; each card's open/closed choice is then remembered per browser, so
+one the owner opens stays open until closed. Software Update, Power, and About are not. Strip positions are set
 through the CSSOM, so the strict `style-src 'self'` CSP (no inline styles) stays intact.
 
 A manual **"Blank screen"** toggle in the control-panel header turns the art off on demand,
@@ -740,7 +742,7 @@ A pass over the Settings tab for the next owner: clearer ordering, tighter copy,
 - **Password copy tightened**, keeping the "open to anyone" preface (its value is the "why" you'd want a password): "The control panel is open to anyone on your network. Optionally set a password. This will not affect the display of art."
 - **New About card** at the bottom (after Wi-Fi, the lowest-interaction spot): the OpenObject name and one-line description, a link to the project home (openobject.io) and to the source on GitHub, and a license line ("© 2026 OpenObject · Free for noncommercial use."). The source link is deliberate: it points the next owner of a stranded frame back to the project so they can revive it. Static HTML in control.html.
 - **Wi-Fi link color fixed.** The Wi-Fi card's addresses and the openobject.local link were falling back to the browser's default blue: a refactor had moved the card to inline paragraphs and left the old `.reach-list` link CSS unmatched. Gave them the house near-white + underline treatment (matching the About links) and removed the five dead `.reach-list` rules that caused the gap.
-- **Settings stays single-column.** A two-column / half-width layout was considered and declined: the panel is mostly phone-driven (columns collapse on a narrow screen anyway) and the two tallest cards (Sleep Schedule, Password) already use the full width, so halving them would just wrap their controls. If Settings grows, the cleaner lever is grouping, not columns. (Done 2026-06-21: the two Settings lists, Sleep Schedule and Connected Collections, are now collapsible from their headers.)
+- **Settings stays single-column.** A two-column / half-width layout was considered and declined: the panel is mostly phone-driven (columns collapse on a narrow screen anyway) and the two tallest cards (Sleep Schedule, Password) already use the full width, so halving them would just wrap their controls. If Settings grows, the cleaner lever is grouping, not columns. (Done 2026-06-21: Sleep Schedule, Connected Collections, and the infrequently-used Password and Wi-Fi cards are now collapsible from their headers, default closed, with each card's open/closed state remembered per browser.)
 
 ### 2026-06-16: Security follow-ups (filename XSS, CSP, upload/disk guards, path scrub)
 A read-only security review (private home-network deployment) found no committed secrets; the items it flagged were fixed this session.

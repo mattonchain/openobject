@@ -1116,9 +1116,10 @@ modeSeg.querySelectorAll('button').forEach((b) =>
 blankBtn.addEventListener('click', toggleBlank);
 sleepAddBtn.addEventListener('click', addSleepTime);
 
-// Collapsible Settings list-cards (HANDOFF §13): clicking the header folds the body away.
-// The open/closed state is remembered per browser (localStorage), so it survives a reload and
-// the panel's own auto-reload after an update. Default (nothing stored, or storage blocked) is open.
+// Collapsible Settings cards (HANDOFF §13): clicking the header folds the body away. The four
+// collapsible cards (Sleep Schedule, Connected Collections, Password, Wi-Fi) start closed to keep
+// the Settings tab short; the open/closed choice is then remembered per browser (localStorage), so
+// a card the owner opens stays open until they close it again, across reloads and auto-updates.
 function wireCollapse(cardId, toggleId) {
   const card = document.getElementById(cardId), btn = document.getElementById(toggleId);
   const key = 'oo.collapsed.' + cardId;
@@ -1126,7 +1127,9 @@ function wireCollapse(cardId, toggleId) {
     card.classList.toggle('is-collapsed', collapsed);
     btn.setAttribute('aria-expanded', String(!collapsed));
   };
-  try { if (localStorage.getItem(key) === '1') apply(true); } catch { /* storage off: stay open */ }
+  let stored = null;
+  try { stored = localStorage.getItem(key); } catch { /* storage off: default closed */ }
+  apply(stored !== '0');  // closed by default, and unless the owner has explicitly opened it ("0")
   btn.addEventListener('click', () => {
     const collapsed = card.classList.toggle('is-collapsed');
     btn.setAttribute('aria-expanded', String(!collapsed));
@@ -1135,6 +1138,7 @@ function wireCollapse(cardId, toggleId) {
 }
 wireCollapse('sleepCard', 'sleepToggle');
 wireCollapse('connectedCard', 'connectedToggle');
+wireCollapse('wifiCard', 'wifiToggle');
 
 // Keep the Sleep Schedule status line and the week strip's "now" marker current as time passes.
 setInterval(() => { if (!panelSettings.hidden) { renderSleepStatus(); renderStrip(); } }, 60000);
@@ -1191,37 +1195,52 @@ function authCardMsg(text) {
 function renderAuthCard() {
   if (!authState.required) {
     authCard.innerHTML = `
-      <div class="section-title">Password</div>
-      <p class="device-note device-note-block">The control panel is open to anyone on your network. Optionally set a password. This will not affect the display of art.</p>
-      <div class="auth-fields">
-        <input id="setPw" class="auth-input" type="password" autocomplete="new-password" placeholder="New password">
-        <input id="setPwConfirm" class="auth-input" type="password" autocomplete="new-password" placeholder="Confirm password">
+      <div class="card-head">
+        <button type="button" class="card-toggle" id="authToggle" aria-expanded="true" aria-controls="authBody">
+          <span class="card-chev" aria-hidden="true">${CHEV_DOWN}</span>
+          <span class="section-title">Password</span>
+        </button>
       </div>
-      <div class="auth-row">
-        <button type="button" id="setPwBtn" class="update-btn">Set password</button>
-      </div>
-      <div class="auth-msg" hidden></div>`;
+      <div class="card-body" id="authBody">
+        <p class="device-note device-note-block">The control panel is open to anyone on your network. Optionally set a password. This will not affect the display of art.</p>
+        <div class="auth-fields">
+          <input id="setPw" class="auth-input" type="password" autocomplete="new-password" placeholder="New password">
+          <input id="setPwConfirm" class="auth-input" type="password" autocomplete="new-password" placeholder="Confirm password">
+        </div>
+        <div class="auth-row">
+          <button type="button" id="setPwBtn" class="update-btn">Set password</button>
+        </div>
+        <div class="auth-msg" hidden></div>
+      </div>`;
     authCard.querySelector('#setPwBtn').addEventListener('click', () =>
       setOrChangePassword(authCard.querySelector('#setPw'), authCard.querySelector('#setPwConfirm'), 'Password protection is on.'));
   } else {
     authCard.innerHTML = `
-      <div class="section-title">Password</div>
-      <p class="device-note device-note-block">Password protection is <strong>on</strong>. The control panel asks for it before any changes; the display is unaffected.</p>
-      <div class="auth-fields">
-        <input id="newPw" class="auth-input" type="password" autocomplete="new-password" placeholder="New password">
-        <input id="newPwConfirm" class="auth-input" type="password" autocomplete="new-password" placeholder="Confirm password">
+      <div class="card-head">
+        <button type="button" class="card-toggle" id="authToggle" aria-expanded="true" aria-controls="authBody">
+          <span class="card-chev" aria-hidden="true">${CHEV_DOWN}</span>
+          <span class="section-title">Password</span>
+        </button>
       </div>
-      <div class="device-row">
-        <button type="button" id="changePwBtn" class="update-btn">Change password</button>
-        <button type="button" id="logoutBtn" class="update-btn">Log out</button>
-        <button type="button" id="offPwBtn" class="update-btn danger">Turn off password</button>
-      </div>
-      <div class="auth-msg" hidden></div>`;
+      <div class="card-body" id="authBody">
+        <p class="device-note device-note-block">Password protection is <strong>on</strong>. The control panel asks for it before any changes; the display is unaffected.</p>
+        <div class="auth-fields">
+          <input id="newPw" class="auth-input" type="password" autocomplete="new-password" placeholder="New password">
+          <input id="newPwConfirm" class="auth-input" type="password" autocomplete="new-password" placeholder="Confirm password">
+        </div>
+        <div class="device-row">
+          <button type="button" id="changePwBtn" class="update-btn">Change password</button>
+          <button type="button" id="logoutBtn" class="update-btn">Log out</button>
+          <button type="button" id="offPwBtn" class="update-btn danger">Turn off password</button>
+        </div>
+        <div class="auth-msg" hidden></div>
+      </div>`;
     authCard.querySelector('#changePwBtn').addEventListener('click', () =>
       setOrChangePassword(authCard.querySelector('#newPw'), authCard.querySelector('#newPwConfirm'), 'Password changed.'));
     authCard.querySelector('#logoutBtn').addEventListener('click', logout);
     authCard.querySelector('#offPwBtn').addEventListener('click', turnOffPassword);
   }
+  wireCollapse('authCard', 'authToggle');
 }
 
 async function setOrChangePassword(pwInput, confirmInput, okMsg) {

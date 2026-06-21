@@ -181,8 +181,8 @@ While asleep, the screen shows the OpenObject logo dimmed and stops playing, the
 back up on its own. **Want it off right now?** Tap **Blank screen** at the top of the control panel,
 and the art goes dark until you tap it again.
 
-The **Sleep Schedule** and **Connected Collections** sections can be **collapsed** by tapping their
-headers, which keeps the Settings tab short.
+The **Sleep Schedule**, **Connected Collections**, **Password**, and **Wi-Fi** sections **start
+collapsed** to keep the Settings tab short. Tap a header to open one, and it stays the way you leave it.
 
 **Power** *(Settings tab)*. **Restart** restarts the OpenObject software, handy if the app seems
 stuck. **Reboot** restarts the whole frame, and **Shut down** turns it off. If a control ever
