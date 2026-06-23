@@ -323,9 +323,10 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .about-sep { color: var(--muted); margin: 0 8px; }
 .about-legal { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
 /* Hint for the hidden Retro Arcade demo: its trigger sequence, painted in the card's own background
-   colour so it stays invisible until you drag-select the About text (then ::selection reveals it). */
-.about-hint { color: var(--panel); -webkit-user-select: all; user-select: all; }
-.about-hint::selection { background: #2a6f43; color: #fff; }
+   colour and inheriting the licence line's font and size, so it is plain invisible text. No
+   select-all and no special selection colour, so seeing it takes knowing it is there and manually
+   highlighting it, where it reveals exactly like any other selected text on the line. */
+.about-hint { color: var(--panel); }
 
 /* Library */
 .library { margin-top: 30px; }
