@@ -203,10 +203,11 @@ function isAppRelevantPath(file) {
 
 // Does this update need a frame REBOOT to fully apply? A self-update restarts the player and the
 // control panel reloads itself, but the kiosk Chromium keeps showing the old /display until the
-// device reboots. So a change to the display page (player/public/display.*) or the kiosk launcher
-// (installer/kiosk/) is the reboot-requiring kind; the update view surfaces it (HANDOFF §15).
+// device reboots. So a change to the display page or its self-playing demo (player/public/display.*
+// or arcade.js) or the kiosk launcher (installer/kiosk/) is the reboot-requiring kind; the update
+// view surfaces it (HANDOFF §15).
 function isKioskFacingPath(file) {
-  return /^player\/public\/display\./.test(file) || file.startsWith('installer/kiosk/');
+  return /^player\/public\/(display|arcade)\./.test(file) || file.startsWith('installer/kiosk/');
 }
 
 // ── Public API ──────────────────────────────────────────────────────
