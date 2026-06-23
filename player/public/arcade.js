@@ -245,6 +245,13 @@ window.RetroArcade = (function () {
       if (divers.length) target = divers[0].x;
       else { const formed = enemies.filter((e) => e.state === 'form'); target = formed.length ? formed[Math.floor(t * 0.6) % formed.length].x : FIELD / 2; }
     }
+    // A bullet already level with the fighter is a "blocker": never slide THROUGH one to reach a far
+    // target, hold on the side the fighter is already on. (The dangers above pre-position for shots
+    // still overhead; this closes the lone graze where the safest-x sat across a level shot.)
+    for (const b of eBullets) if (b.vy > 0 && b.y > SHIP_Y - 12 && b.y < SHIP_Y + 10) {
+      if (ship.x <= b.x) target = Math.min(target, b.x - 7);
+      else target = Math.max(target, b.x + 7);
+    }
     ship.tx = clamp(target, FIELD * 0.08, FIELD * 0.92);
     const sd = ship.tx - ship.x, step = 168 * dt;
     ship.x += Math.abs(sd) < step ? sd : Math.sign(sd) * step;
