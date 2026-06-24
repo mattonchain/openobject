@@ -36,6 +36,7 @@ let currentSig = null; // fit+filename of the on-screen piece — detects a live
 let front = 0; // which layer is currently visible
 let timer = null;
 let started = false;
+let lastShowAt = 0; // when the last crossfade began — guards the hidden-layer cleanup against a live fade
 let shuffleQueue = [];
 let sleeping = false; // Sleep Hours / manual Blank: showing the dimmed mark (HANDOFF §13)
 let shiftTimer = null; // slow pixel-shift while asleep (anti-burn-in)
@@ -131,6 +132,17 @@ function render(layer, item, onReady) {
   setTimeout(onReady, item.kind === 'connected' ? 30000 : 500);
 }
 
+// Free the off-screen layer once a crossfade has settled, so a previously-shown piece's iframe stops
+// rendering behind the visible one (an opacity:0 iframe keeps animating and competes for the GPU on a
+// weak panel). The timestamp guard never clears while a fade may be running (that would cut off the
+// outgoing piece). The next show() repopulates the layer from scratch, exactly as it already did, so
+// nothing visible changes — only the wasted background rendering stops.
+function freeHiddenLayer() {
+  if (Date.now() - lastShowAt < 700) return;     // a crossfade may still be running — leave both layers
+  const hidden = layers[1 - front];
+  if (!hidden.classList.contains('show')) hidden.replaceChildren();
+}
+
 // Render + crossfade to a specific piece.
 function show(item) {
   pos = items.indexOf(item);
@@ -150,6 +162,10 @@ function show(item) {
     // enough that, timed from advance(), the piece is on screen for only (duration minus generate
     // time). Arming the next advance here gives every piece its full visible duration (HANDOFF §7).
     armAdvance();
+    // Once the crossfade settles, drop the layer we just faded away from so the previous piece's iframe
+    // stops rendering behind the visible one (after the fade, never during it — see freeHiddenLayer).
+    lastShowAt = Date.now();
+    setTimeout(freeHiddenLayer, 750);
   });
   render(layers[back], item, reveal);
   started = true;
@@ -254,6 +270,7 @@ function apply(state) {
   if (!started || pos < 0) return advance();             // (re)start, or skip a deleted current
   if (sig(items[pos]) !== currentSig) show(items[pos]);  // current piece restyled (Fit/Fill) → re-render
   if (items.length > 1 && timer === null) armAdvance(); // 1→many: resume cadence (a lone piece had none)
+  if (items.length === 1) freeHiddenLayer(); // lone/pinned: drop any leftover iframe still rendering behind it
 }
 
 async function tick() {
