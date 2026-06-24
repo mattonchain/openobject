@@ -160,6 +160,13 @@ const REGISTRY = [
     // is our optional Animate, default OFF (background only), engaged hands-free by the easterEgg hook below.
     animateDefault: false,
     animateHook: 'easterEgg',
+    // p5.js shows its built-in loading screen (#p5_loading, an artist-styled purple "loading..." div) while
+    // the sketch preloads its day/night photos. The display reveals a connected piece on the iframe's document
+    // `load`, which fires before p5 finishes loading those images, so that loading screen flashes during the
+    // crossfade into this image-heavy piece. Hide it from the first paint (the same hideSelectors seam as The
+    // Bloom's #startOverlay): a brief blank while the photo finishes loading replaces the stray text, keeping
+    // the stage chrome-free (§6).
+    hideSelectors: ['#p5_loading'],
     // The photos are square (3840^2 / 2500^2) drawn object-fit: contain, so on the 1:1 stage they fill edge
     // to edge (no crop, no aspect).
     // Of the contract's live tokens, 3/4/5/6 carry an animation_url and render here; token 1 ("Desert Steel")
