@@ -19,6 +19,7 @@ const db = require('./src/db');
 const { classify } = require('./src/formats');
 const updater = require('./src/updater');
 const collections = require('./src/collections');
+const seed = require('./src/seed');
 const RESTART_CODE = require('./src/restart-code');
 
 // Set by the supervisor (HANDOFF §15). When supervised, the player may exit to auto-relaunch
@@ -67,6 +68,7 @@ const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const SLEEP_DAYS_ALL = [0, 1, 2, 3, 4, 5, 6];
 
 db.initDb(); // ensure the SQLite store + uploads dir exist before serving
+seed.seedSampleIfNeeded(); // first run: copy the shipped sample piece into the Library (HANDOFF §20)
 
 const app = express();
 app.disable('x-powered-by');

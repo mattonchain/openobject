@@ -110,6 +110,11 @@ is the set that's actually showing on the wall. The control panel has three tabs
 - **Settings:** sleep schedule, connected collections, software updates, frame controls (restart, shut down), an optional password, how to reach the frame over Wi-Fi, and an About section,
   described below.
 
+**A sample to start.** Your Library comes with one piece already in it, the **Bouncing OpenObject Logo**
+(the OpenObject wordmark drifting around the screen, an homage to the old DVD screensaver). It sits at the
+bottom of the Library as the piece that came with your player. Keep it, build a Rotation around it, or remove
+it like any other piece.
+
 **Order.** Choose how the Rotation plays:
 
 - **Sequence:** in the order you arrange them. In the **Rotation** tab, drag a piece by its handle,
