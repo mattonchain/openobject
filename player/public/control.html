@@ -225,7 +225,7 @@
 
   <!-- Add connected artwork: pick a supported collection, enter the Token ID. -->
   <div id="cxOverlay" class="cx-overlay" hidden>
-    <div class="cx-box" role="dialog" aria-label="Add connected artwork">
+    <div id="cxBox" class="cx-box" role="dialog" aria-label="Add connected artwork">
       <div class="cx-head">
         <span class="cx-title">Add connected artwork</span>
         <button type="button" class="cx-close" id="cxClose" aria-label="Close">✕</button>
@@ -238,7 +238,8 @@
       <div id="cxResult" class="cx-result" hidden></div>
       <div id="cxMsg" class="cx-msg" hidden></div>
       <div class="cx-foot">
-        <button type="button" id="cxAdd" class="update-btn primary" disabled>Add to library</button>
+        <button type="button" id="cxCancel" class="update-btn">Cancel</button>
+        <button type="button" id="cxAdd" class="update-btn primary" disabled>Add</button>
       </div>
     </div>
   </div>

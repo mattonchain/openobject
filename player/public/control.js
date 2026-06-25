@@ -63,6 +63,7 @@ const authCard = document.getElementById('authCard');
 // Connected artwork: entry button, add modal, and the Settings collections card.
 const addConnectedBtn = document.getElementById('addConnected');
 const cxOverlay = document.getElementById('cxOverlay');
+const cxBox = document.getElementById('cxBox');
 const cxClose = document.getElementById('cxClose');
 const cxCollections = document.getElementById('cxCollections');
 const cxToken = document.getElementById('cxToken');
@@ -71,6 +72,7 @@ const cxSupported = document.getElementById('cxSupported');
 const cxResult = document.getElementById('cxResult');
 const cxMsg = document.getElementById('cxMsg');
 const cxAdd = document.getElementById('cxAdd');
+const cxCancel = document.getElementById('cxCancel');
 const connectedList = document.getElementById('connectedList');
 const ccUnhideAll = document.getElementById('ccUnhideAll');
 const ccCount = document.getElementById('ccCount');
@@ -238,7 +240,7 @@ function enterEditMeta(cardEl, item) {
       placeholder="${escapeHtml(item.original_name)}" value="${escapeHtml(curTitle)}">
     <input class="meta-input meta-artist" type="text" maxlength="200" aria-label="Artist"
       placeholder="Artist (optional)" value="${escapeHtml(curArtist)}">`;
-  actions.innerHTML = '<button class="meta-save">Save</button><button class="meta-cancel">Cancel</button>';
+  actions.innerHTML = '<button class="meta-cancel">Cancel</button><button class="meta-save">Save</button>';
   const titleInput = meta.querySelector('.meta-title');
   const artistInput = meta.querySelector('.meta-artist');
   const save = async () => {
@@ -1357,14 +1359,37 @@ fileInput.addEventListener('change', () => { send(fileInput.files); fileInput.va
 );
 drop.addEventListener('drop', (e) => send(e.dataTransfer.files));
 
-// Connected artwork: entry button → modal; Token ID resolves on change/Enter.
+// Connected artwork: entry button → modal. The Token ID resolves on its own a short moment after you stop
+// typing (debounced) — there's no key to press; editing the number clears the previous result right away,
+// and Enter resolves immediately rather than waiting.
 addConnectedBtn.addEventListener('click', openConnected);
 cxClose.addEventListener('click', closeConnected);
+cxCancel.addEventListener('click', closeConnected);
 cxOverlay.addEventListener('click', (e) => { if (e.target === cxOverlay) closeConnected(); });
-cxToken.addEventListener('change', previewToken);
-cxToken.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); previewToken(); } });
+let cxLookupTimer;
+cxToken.addEventListener('input', () => {
+  resetResolve();                               // drop any stale preview/enabled Add the instant the number changes
+  clearTimeout(cxLookupTimer);
+  cxLookupTimer = setTimeout(previewToken, 500);
+});
+cxToken.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(cxLookupTimer); previewToken(); } });
 cxAdd.addEventListener('click', addConnected);
 ccUnhideAll.addEventListener('click', unhideAll);
+
+// While the Add-connected dialog is open, keep keyboard focus inside it: Tab/Shift+Tab wrap around the
+// dialog's own controls instead of walking off the page (and, in Safari, on into the toolbar, which pops
+// the Favorites view). Esc closes it, matching the in-place title/artist editor.
+window.addEventListener('keydown', (e) => {
+  if (cxOverlay.hidden) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeConnected(); return; }
+  if (e.key !== 'Tab') return;
+  const items = [...cxBox.querySelectorAll('button, input')].filter((el) => !el.disabled && !el.hidden);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1], a = document.activeElement;
+  if (!cxBox.contains(a)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+});
 
 // ── Optional password (HANDOFF §10) ─────────────────────────────────
 // Off by default. /api/auth/status reports whether a password is set and whether this browser is

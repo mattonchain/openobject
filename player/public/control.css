@@ -20,6 +20,13 @@ body {
   min-height: 100vh;
 }
 
+/* Keyboard-only focus ring: replace the browser's bright default with the same quiet lightened edge the
+   text inputs use (#4a4a52), and only show it when navigating with the keyboard (:focus-visible), not on
+   mouse clicks. Cards clip their contents (overflow:hidden), so their edge-to-edge action buttons take an
+   inset ring instead of an outset one. */
+button:focus-visible { outline: 2px solid #4a4a52; outline-offset: 2px; }
+.actions button:focus-visible { outline-offset: -2px; }
+
 .topbar {
   display: flex;
   align-items: center;
@@ -398,7 +405,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .actions .del:hover { background: #2a1c1e; color: var(--danger); }
 
 /* Uploaded-piece title/artist edit (HANDOFF §7): the name/artist block is a tap target (pointer + a faint
-   hover tint that takes no extra space) which swaps in two inputs; the actions row becomes Save/Cancel. */
+   hover tint that takes no extra space) which swaps in two inputs; the actions row becomes Cancel/Save. */
 .meta.editable { cursor: pointer; }
 .meta.editable:hover { background: #1c1c1f; }
 .meta.editing { gap: 8px; }
@@ -415,7 +422,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   padding: 7px 9px;
 }
 .meta-input:focus { outline: none; border-color: #4a4a52; }
-.actions .meta-save { color: #b6f0c2; border-right: 1px solid var(--line); }
+.actions .meta-cancel { border-right: 1px solid var(--line); }   /* Cancel on the left, Save on the right */
+.actions .meta-save { color: #b6f0c2; }
 .actions .meta-save:hover { background: #1c3a26; color: #d6ffe0; }
 .actions .meta-cancel:hover { background: #242428; color: var(--text); }
 
@@ -632,7 +640,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .cx-supported:not([hidden]) { display: flex; }
 .cx-supported svg { color: #9fe1cb; flex: none; }
 .cx-supported-ids { color: var(--text); }
-.cx-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+.cx-foot { margin-top: 16px; display: flex; justify-content: space-between; }   /* Cancel far-left, Add far-right */
 
 /* Connected Collections settings card (header uses the shared collapsible .card-head) */
 .cc-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
