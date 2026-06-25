@@ -10,7 +10,8 @@ const emptyEl = document.getElementById('empty');
 const statusEl = document.getElementById('status');
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
-const libSort = document.getElementById('libSort');     // Library sort control (tab row; Library tab only)
+const libView = document.getElementById('libView');     // Library view controls (tab row; Library tab only)
+const filterSelect = document.getElementById('filterSelect');
 const sortSelect = document.getElementById('sortSelect');
 
 const durationEl = document.getElementById('duration');
@@ -85,11 +86,14 @@ const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" strok
 
 let pinnedId = null;
 let mode = 'sequence';
-let librarySort = 'recent'; // Library grid order: recent (default) | oldest | name (HANDOFF §7)
+let librarySort = 'recent'; // Library grid order: recent (default) | oldest | title | artist (HANDOFF §7)
+let libraryFilter = 'all';  // Library view filter: all (default) | rotation — hides not-in-rotation pieces (HANDOFF §7)
 let durationUnit = 'seconds';
 let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓ moves
 let sleepRanges = []; // up to three day-aware sleep windows (HANDOFF §13)
-let manualBlank = false; // instant "Blank screen" override
+let manualBlank = false; // manual Sleep: off until woken
+let wakeUntil = 0;       // manual Wake: schedule held off until this ms epoch (0 = none)
+let asleep = false;      // live screen state from the server (manual overrides + schedule); drives the Sleep/Wake button
 let runningCommit = null; // the commit this player reports — used to detect the restart
 let updateNeedsReboot = false; // the offered update touches the kiosk display → frame reboot needed (HANDOFF §15)
 let collectionsList = []; // supported connected collections (from /api/collections)
@@ -257,9 +261,17 @@ function enterEditMeta(cardEl, item) {
 
 async function loadLibrary() {
   const items = await fetch('/api/library').then((r) => r.json());
-  grid.replaceChildren(...items.map(card));
+  // The tab count is the whole Library (how much art you have), not the filtered view.
   libCount.textContent = items.length ? String(items.length) : '';
-  emptyEl.hidden = items.length > 0;
+  // "Show: In rotation" hides the not-in-rotation pieces from the grid. A view filter only — nothing is
+  // deleted, and the server has already ordered the list (sample anchored last) before we narrow it.
+  const shown = libraryFilter === 'rotation' ? items.filter((it) => it.in_rotation) : items;
+  grid.replaceChildren(...shown.map(card));
+  // Tell an empty Library apart from a filter that's hiding everything, so the prompt isn't misleading.
+  emptyEl.textContent = shown.length === 0 && items.length > 0
+    ? 'No pieces in the rotation yet. Switch Show to All to add some.'
+    : 'Nothing here yet, add some art above.';
+  emptyEl.hidden = shown.length > 0;
 }
 
 // Library sort: persist the choice (a server setting, so it sticks across reloads and devices until
@@ -268,6 +280,15 @@ async function loadLibrary() {
 async function setLibrarySort(value) {
   librarySort = value;
   await saveSettings({ librarySort: value });
+  await loadLibrary();
+}
+
+// Library view filter (All / In rotation): persisted like the sort (a shared server setting, so the view
+// holds across reloads and devices), then re-render the grid through the filter. Pure presentation — it
+// never changes rotation membership, so a piece reappears the moment Show is set back to All.
+async function setLibraryFilter(value) {
+  libraryFilter = value;
+  await saveSettings({ libraryFilter: value });
   await loadLibrary();
 }
 
@@ -443,9 +464,11 @@ async function loadSettings() {
   setSeg(modeSeg, 'mode', mode);
   librarySort = s.librarySort || 'recent';
   sortSelect.value = librarySort;
+  libraryFilter = s.libraryFilter || 'all';
+  filterSelect.value = libraryFilter;
   pinnedId = s.pinnedId;
   sleepRanges = (s.sleepRanges || []).map((r) => ({ start: r.start, end: r.end, days: Array.isArray(r.days) ? r.days.slice() : [] }));
-  manualBlank = !!s.manualBlank;
+  applySleepState(s);
   renderSleep();
   renderBlank();
   showReturnArt(!!s.retroArcade); // reflect the demo's runtime state (e.g. on reload while it runs)
@@ -594,10 +617,16 @@ async function commitSleep() {
   await saveSettings({ sleepRanges });
 }
 
-// Header status, off the panel's own clock (the same signal the display flips on): reads
-// "Sleeping until 7:00am" while asleep, "Awake until 10:00pm" otherwise (next boundary in the week).
+// Header status, off the panel's own clock (the same signal the display flips on): a manual Sleep reads
+// "Sleeping now", a manual Wake "Awake until <next sleep>", otherwise the schedule's next boundary in the
+// week ("Sleeping until 7:00am" / "Awake until 10:00pm").
 function renderSleepStatus() {
-  if (manualBlank) { sleepStatus.textContent = 'Blanked now'; return; }
+  if (manualBlank) { sleepStatus.textContent = 'Sleeping now'; return; }
+  if (wakeUntil && wakeUntil > Date.now()) { // manual Wake holding the schedule off until the next window
+    const d = new Date(wakeUntil);
+    sleepStatus.textContent = 'Awake until ' + fmtMin(d.getHours() * 60 + d.getMinutes());
+    return;
+  }
   if (!sleepRanges.some((r) => r.days.length)) { sleepStatus.textContent = ''; return; }
   const now = new Date(), today = now.getDay(), nowMin = now.getHours() * 60 + now.getMinutes();
   const asleepNow = asleepAt(today, nowMin);
@@ -666,15 +695,27 @@ function renderStrip() {
   });
 }
 
+function applySleepState(s) {
+  manualBlank = !!s.manualBlank;
+  wakeUntil = s.wakeUntil || 0;
+  asleep = !!s.asleep;
+}
 function renderBlank() {
-  blankBtn.setAttribute('aria-pressed', String(manualBlank));
-  blankBtn.textContent = manualBlank ? 'Blanked' : 'Blank screen';
+  blankBtn.setAttribute('aria-pressed', String(asleep)); // amber when the screen is asleep
+  blankBtn.textContent = asleep ? 'Wake' : 'Sleep';
   renderSleepStatus();
 }
+// Sleep/Wake: the button reflects the live state, so a press sends the opposite. The server figures out
+// the rest, manual Wake during a sleep window holds the schedule off until the next one (see isAsleep).
 async function toggleBlank() {
-  manualBlank = !manualBlank;
-  renderBlank();
-  await saveSettings({ manualBlank });
+  blankBtn.disabled = true;
+  try {
+    const s = await saveSettings({ manualBlank: !asleep }).then((r) => r.json());
+    applySleepState(s);
+    renderBlank();
+  } finally {
+    blankBtn.disabled = false;
+  }
 }
 
 // ── Software update (HANDOFF §15) — all browser-driven; never in the playback path ──
@@ -1218,7 +1259,7 @@ function switchTab(name) {
     tab.setAttribute('aria-selected', String(on));
     panel.hidden = !on;
   }
-  libSort.hidden = name !== 'library'; // the sort only applies to the Library grid
+  libView.hidden = name !== 'library'; // the Show/Sort controls only apply to the Library grid
 }
 Object.keys(TABS).forEach((name) => TABS[name][0].addEventListener('click', () => switchTab(name)));
 
@@ -1234,6 +1275,7 @@ modeSeg.querySelectorAll('button').forEach((b) =>
   b.addEventListener('click', () => { mode = b.dataset.mode; setSeg(modeSeg, 'mode', mode); saveSettings({ mode }); loadRotation(); })
 );
 sortSelect.addEventListener('change', () => setLibrarySort(sortSelect.value));
+filterSelect.addEventListener('change', () => setLibraryFilter(filterSelect.value));
 blankBtn.addEventListener('click', toggleBlank);
 sleepAddBtn.addEventListener('click', addSleepTime);
 

@@ -51,7 +51,7 @@ body {
   border: 1.5px dashed var(--line);
   border-radius: 14px;
   background: var(--panel);
-  padding: 40px 20px;
+  padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -464,12 +464,15 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
    (the only case the grid shifts, mobile-only) instead of overflowing or clipping. */
 .tabrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 12px; margin-top: 8px; border-bottom: 1px solid var(--line); }
 .tabs { display: flex; gap: 4px; }
-/* Library sort: a muted "Sort" label + a compact select, matching the connected-control selects. Shown
-   only on the Library tab (control.js toggles [hidden]); right-aligned, lifted off the border line. */
-.lib-sort { display: inline-flex; align-items: center; gap: 7px; margin: 0 2px 7px auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.lib-sort[hidden] { display: none; }
-.lib-sort-select { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; cursor: pointer; }
-.lib-sort-select:hover { border-color: #4a4a52; }
+/* Library view controls: a muted "Show" filter + a "Sort" select, each a label + compact select matching
+   the connected-control selects. The group shows only on the Library tab (control.js toggles [hidden] on
+   #libView); right-aligned and lifted off the border line, it wraps its two controls onto two lines only on
+   a very narrow phone where they can't share one. */
+.lib-view { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px 14px; margin: 0 2px 7px auto; }
+.lib-view[hidden] { display: none; }
+.lib-ctrl { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.lib-ctrl-select { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; cursor: pointer; }
+.lib-ctrl-select:hover { border-color: #4a4a52; }
 .tab {
   appearance: none;
   border: 0;

@@ -17,15 +17,15 @@
     </div>
     <div class="topbar-actions">
       <button type="button" id="returnArtBtn" class="return-art" hidden>Return to art</button>
-      <button type="button" id="blankBtn" class="blank-toggle" aria-pressed="false" title="Turn the art off now, until you switch it back">Blank screen</button>
+      <button type="button" id="blankBtn" class="blank-toggle" aria-pressed="false">Sleep</button>
       <a class="display-link" href="/display" target="_blank" rel="noopener">Open display ↗</a>
     </div>
   </header>
 
   <main class="wrap">
     <!-- Tabs first: Library (everything uploaded) · Rotation (curated subset + how it cycles) · Settings.
-         The Library sort sits on this same row (right-aligned), shown only on the Library tab, so it never
-         pushes the grid down the scroll (HANDOFF §7). -->
+         The Library view controls (Show filter + Sort) sit on this same row (right-aligned), shown only on
+         the Library tab, so they never push the grid down the scroll (HANDOFF §7). -->
     <div class="tabrow">
       <nav class="tabs" role="tablist" aria-label="Sections">
         <button type="button" class="tab" id="tabLibrary" role="tab" aria-selected="true" aria-controls="panelLibrary">
@@ -38,15 +38,24 @@
           Settings
         </button>
       </nav>
-      <label class="lib-sort" id="libSort">
-        <span class="lib-sort-label">Sort</span>
-        <select id="sortSelect" class="lib-sort-select" aria-label="Sort the Library">
-          <option value="recent">Recent</option>
-          <option value="oldest">Oldest</option>
-          <option value="title">Title</option>
-          <option value="artist">Artist</option>
-        </select>
-      </label>
+      <div class="lib-view" id="libView">
+        <label class="lib-ctrl">
+          <span class="lib-ctrl-label">Show</span>
+          <select id="filterSelect" class="lib-ctrl-select" aria-label="Which pieces to show">
+            <option value="all">All</option>
+            <option value="rotation">In rotation</option>
+          </select>
+        </label>
+        <label class="lib-ctrl">
+          <span class="lib-ctrl-label">Sort</span>
+          <select id="sortSelect" class="lib-ctrl-select" aria-label="Sort the Library">
+            <option value="recent">Recent</option>
+            <option value="oldest">Oldest</option>
+            <option value="title">Title</option>
+            <option value="artist">Artist</option>
+          </select>
+        </label>
+      </div>
     </div>
 
     <section class="panel" id="panelLibrary" role="tabpanel" aria-labelledby="tabLibrary">
@@ -63,7 +72,7 @@
       </button>
       <p id="status" class="status" hidden></p>
       <div id="grid" class="grid"></div>
-      <p id="empty" class="empty" hidden>Nothing here yet — add some art above.</p>
+      <p id="empty" class="empty" hidden>Nothing here yet, add some art above.</p>
     </section>
 
     <section class="panel" id="panelRotation" role="tabpanel" aria-labelledby="tabRotation" hidden>

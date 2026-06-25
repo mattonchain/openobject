@@ -182,6 +182,8 @@ Uploading **adds to the library**. A "daily refresh" habit is achieved by curati
 
 The **Library grid is sortable** (built 2026-06-24): a **Sort** control on the Library tab orders the grid by **Recent** (newest first, the default), **Oldest**, **Title** (A to Z, case-insensitive), or **Artist** (A to Z by the artist shown on the card, with un-credited pieces last). The choice is a persisted server setting, and the **install sample (the Bouncing OpenObject Logo) stays anchored to the bottom in every order** (§20). This is grid presentation only; the Rotation keeps its own curated order.
 
+The grid also has a **view filter** (built 2026-06-25): a **Show** control beside the Sort offers **All** (the default) or **In rotation**, which hides every piece not currently in the rotation so a large Library can be decluttered to just what is playing, without deleting anything. It is a persisted server setting like the sort, but applied in the browser (so the Library tab count stays the whole library, not the filtered view), and it is fully reversible: setting Show back to All brings the hidden pieces straight back. It changes only what the grid shows, never rotation membership. See §20.
+
 Uploaded pieces can carry an **optional title and artist** (built 2026-06-24): tapping a piece's name on its Library card edits them in place, and a blank field falls back to the filename / file size. Connected pieces keep their chain/registry title and artist (authoritative), so they are not editable. This is **control-panel metadata only**, the display stays zero-chrome (§6), and the **Name** sort keys on the displayed title (a custom title when set, else the filename). See §20.
 
 **Duration, one global, equal time for every piece (confirmed 2026-06-12).**
@@ -301,7 +303,7 @@ photos never enter the repo, §8). Build none of this in Phase 1.
 | Fit/Fill default | **Fit** (original aspect ratio); settable | Applies to new clips; per-clip override always available. |
 | Display duration | **Settable global** (seconds / minutes / hours) | One equal-time duration for **every** piece; no per-clip override. |
 | Rotation order | **Sequence** | Sequence / Shuffle (§7); settable. |
-| Sleep Schedule | **Off** (no windows) | Up to three day-aware windows (12h clock, per day of week) + week-at-a-glance strip + manual "Blank screen"; dimmed-logo sleep screen (§13). |
+| Sleep Schedule | **Off** (no windows) | Up to three day-aware windows (12h clock, per day of week) + week-at-a-glance strip + manual Sleep/Wake toggle; dimmed-logo sleep screen (§13). |
 | Updates | **Manual check; track `main`** | Self-update from GitHub via the control panel (§15). Owner-initiated; fast-forward only. |
 | Connected Collections | **Supported list; Animate on where applicable, none hidden** | Curated web/on-chain collections, added by Token ID (§8). Per-collection Animate (auto-motion), a motion-speed slider (0 to 10), or a mode dropdown (e.g. snowfall) where the piece offers one, shown only for collections with something to set, plus Hide/Unhide. |
 
@@ -334,15 +336,23 @@ closed** to keep the tab short; each card's open/closed choice is then remembere
 one the owner opens stays open until closed. Software Update, Power, and About are not. Strip positions are set
 through the CSSOM, so the strict `style-src 'self'` CSP (no inline styles) stays intact.
 
-A manual **"Blank screen"** toggle in the control-panel header turns the art off on demand,
-independent of the schedule, the companion to scheduled sleep and the answer to "how do I stop
-the display right now?". While asleep, **playback stops** and the panel shows the **sleep
-screen**: the same boot/idle mark at the **same size and placement, dimmed (~0.05 opacity) and
-with no caption** underneath. To rest the panel it does a slow, imperceptible **pixel-shift**
-every ~90 s (the standard anti-burn-in technique, chosen over a periodic fade as sufficient on
-its own; on this LCD it's belt-and-suspenders anyway). The server computes `asleep` (schedule
-or manual) and the display renders on that one signal, flipping within ~5 s of a boundary.
-Phase 1 blanks in **software**; dimming the actual **backlight** is a Phase 2 hardware hook.
+A manual **Sleep / Wake** toggle in the control-panel header turns the art off (or back on) on
+demand, independent of the schedule, the answer to "how do I stop the display right now?". The
+button reflects the **live** state: it reads **Sleep** while the art is showing and **Wake**
+(highlighted) while the panel is asleep for any reason. **Sleep** blanks the panel until it is
+woken. **Wake** is more than a plain un-blank: pressed during a scheduled sleep window it holds
+the schedule off until the **next** window begins (a `wakeUntil` timestamp from `nextSleepStart`),
+so the art stays on for the rest of the night and the schedule resumes on its own; pressed
+otherwise it just clears the manual sleep. Editing the schedule cancels an active wake-override.
+While asleep, **playback stops** and the panel shows the **sleep screen**: the same boot/idle mark
+at the **same size and placement, dimmed (~0.05 opacity) and with no caption** underneath. To rest
+the panel it does a slow, imperceptible **pixel-shift** every ~90 s (the standard anti-burn-in
+technique, chosen over a periodic fade as sufficient on its own; on this LCD it's
+belt-and-suspenders anyway). The server computes `asleep` from the schedule plus two manual
+overrides, manual Sleep (`manualBlank`, off until woken) and manual Wake (`wakeUntil`, schedule
+suppressed until the next window), and the display renders on that one signal, flipping within
+~5 s of a boundary. Phase 1 blanks in **software**; dimming the actual **backlight** is a Phase 2
+hardware hook.
 
 ---
 
@@ -560,6 +570,20 @@ The original software is a standard Android app running in **Waydroid** (a Linea
 ## 20. Build decision log
 
 Living record of decisions taken during the build (newest first). When any of these affect user-facing behavior, the Setup Guide is updated in the same change (§16).
+
+### 2026-06-25: Rename "Blank screen" to Sleep / Wake, and make Wake suppress the schedule until the next window
+"Blank screen" and the Sleep Schedule were already the same display state (one `asleep` signal; §13), so the manual header toggle is renamed **Sleep / Wake** to share the schedule's vocabulary and read like a standard device control. The button now reflects the **live** state (the server's `asleep`), not just the manual flag: **Sleep** while the art shows, **Wake** (the amber `aria-pressed` highlight) while the panel is asleep for any reason, so it stays honest even during a scheduled sleep.
+- **Wake means it.** Pressing Wake during a scheduled sleep window can't just clear the manual blank (the schedule would re-sleep it on the next ~5 s poll), so a second override was added: a `wake_until` timestamp set to `nextSleepStart(now)` (the next moment any window begins, scanning the week ahead). `isAsleep` is now: manual Sleep (`manualBlank`) forces asleep; else if `now < wakeUntil` the schedule is suppressed (awake); else the schedule decides. So Wake keeps the art on for the rest of the current window and the schedule resumes on its own at the next one (the "stay up tonight, normal tomorrow" model). Editing the schedule clears `wake_until`, so new windows take effect at once. Manual Sleep stays indefinite (off until woken); the asymmetry is intentional (off can wait for you; on shouldn't silently disable the schedule).
+- **No new UI verbiage** (Matt's call): the button is two words, the verbose tooltip was dropped, and the only status text is the existing Sleep-card line, now "Sleeping now" for a manual sleep and "Awake until <next sleep>" during a wake-override (replacing "Blanked now").
+- **Plumbing.** `wakeUntil` and the derived `asleep` are surfaced in `currentSettings` / `/api/settings`; the `manualBlank` field on the settings PUT now carries the Sleep/Wake intent (true = sleep, clears any override; false = wake, computes `wake_until` only if a window is live now). `server.js` (`scheduledAsleep` / `nextSleepStart` / the reworked `isAsleep`, the PUT branch, the display reads `settings.asleep`), `control.js` (live-state button via `applySleepState`, `renderSleepStatus`, `toggleBlank` posts the opposite of the live state), `control.html` (button text, tooltip removed). Internal names (`blankBtn`, `manual_blank`) kept. Docs (§13, Setup Guide).
+- **Verified on Mac** (Phase 1, isolated preview): from awake, Sleep gave button "Wake" (amber) with `asleep` and the display both true and "Sleeping now"; Wake with no schedule returned to awake with no override; a daily all-day window showed "Wake" by schedule, then Wake set `wakeUntil` to tomorrow 00:00 with `asleep`/display false and "Awake until 12:00am"; editing the schedule cleared the override; no console errors. (Matt, 2026-06-25.)
+
+### 2026-06-25: Library view filter (Show: All / In rotation), persisted, declutter without deleting
+As a Library grows, the owner may want to see only what is actually playing without deleting the rest. So the Library tab gains a **Show** filter beside the Sort: **All** (default) or **In rotation**, which renders only the pieces with the rotation checkmark and hides the others. It is a **view filter, not a state on each piece**: nothing is deleted or moved, rotation membership is untouched, and switching Show back to All brings every hidden piece back instantly. Chosen over a per-item "hidden" flag (the Connected Collections Hide/Unhide-all model) because the stated need was "hide *all* the unchecked ones to declutter", which a single reversible view toggle serves with no schema change, no per-card button, and no "hidden but in rotation" ambiguity.
+- **Persisted like the sort, applied in the browser.** The choice round-trips as a server setting (`library_filter`, surfaced as `libraryFilter` in `/api/settings` and `currentSettings`, validated against `all|rotation` with a 400 otherwise), the same shared-setting model as `librarySort` so the view holds across reloads and devices. Unlike the sort it is **not** applied in `/api/library`: the server still returns the whole ordered list (sample anchored last) and `control.js#loadLibrary` narrows it with `items.filter(it => it.in_rotation)`. The filter is trivial, so this avoids a second query branch and, deliberately, keeps the **Library tab count as the whole library** (how much art you have) while only the grid narrows. The Rotation tab already shows the in-rotation count.
+- **Placement (no grid shift).** The Sort `<select>` was wrapped with the new Show `<select>` in a right-aligned `.lib-view` group on the tab row (renamed from the lone `.lib-sort`), shown only on the Library tab. Same zero-vertical-height-when-it-fits behavior as before; on a very narrow phone the group's two controls wrap onto two lines (`flex-wrap` on `.lib-view`).
+- **Empty state.** When the filter hides everything but the Library is non-empty, the grid's empty line reads "No pieces in the rotation yet. Switch Show to All to add some." instead of the misleading "add some art above"; a truly empty Library still shows the add prompt.
+- **Files.** `player/server.js` (`LIBRARY_FILTERS` set; `libraryFilter` persisted + validated in `/api/settings`; surfaced in `currentSettings`), `player/public/control.html` (the `.lib-view` wrapper + the Show `<select>`), `control.css` (`.lib-view`/`.lib-ctrl` replacing `.lib-sort`), `control.js` (load/apply/persist the choice; filter in `loadLibrary`; hide the group off the Library tab), docs (§7, Setup Guide).
 
 ### 2026-06-24: Rename the "Name" sort to "Title"; prefill the title field with the filename
 Two small follow-ups to the title/artist work, from Matt using it:

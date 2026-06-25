@@ -64,6 +64,12 @@ const FITS = new Set(['fit', 'fill']);
 // keeps the install sample anchored last.
 const LIBRARY_SORTS = new Set([...Object.keys(db.LIBRARY_SORTS), 'artist']);
 
+// Library view filter (HANDOFF §7): which subset of the grid to show. A persisted view setting like
+// the sort, but applied in the browser (the filter is trivial; it never touches the /api/library query),
+// so the Library tab count stays the whole library. 'all' shows everything; 'rotation' shows only pieces
+// currently in the rotation, a one-click declutter the owner can reverse without deleting anything.
+const LIBRARY_FILTERS = new Set(['all', 'rotation']);
+
 // Sleep Schedule (HANDOFF §13): up to three day-aware windows, each with its own days of the
 // week; the panel blanks to the dimmed mark while inside an active window (or while manually
 // blanked). Off by default (no windows). Times are stored 24h "HH:MM" with days as 0-6 (0=Sun);
@@ -454,10 +460,34 @@ function windowAsleep(r, dow, nowMin) {
   if (nowMin >= s) return r.days.includes(dow);                         // overnight, before midnight
   return nowMin < e && r.days.includes((dow + 6) % 7);                  // overnight, after midnight
 }
-function isAsleep(settings, now = new Date()) {
-  if (settings.manualBlank) return true;         // manual Blank overrides the schedule (HANDOFF §13)
+// Just the schedule: is a sleep window active right now (ignoring the manual overrides)?
+function scheduledAsleep(settings, now = new Date()) {
   const dow = now.getDay(), nowMin = now.getHours() * 60 + now.getMinutes();
   return settings.sleepRanges.some((r) => windowAsleep(r, dow, nowMin));
+}
+// The one signal the display flips on (HANDOFF §13). Two manual overrides sit on top of the schedule:
+// manual Sleep (manualBlank) forces asleep until woken; manual Wake (wakeUntil) holds the schedule off
+// until the next window begins, so "Wake" during a sleep window keeps the art on, then the schedule resumes.
+function isAsleep(settings, now = new Date()) {
+  if (settings.manualBlank) return true;                                 // manual Sleep: off until woken
+  if (settings.wakeUntil && now.getTime() < settings.wakeUntil) return false; // manual Wake: schedule suppressed until the next window
+  return scheduledAsleep(settings, now);
+}
+// The next moment a sleep window begins (ms epoch), scanning the week ahead, or 0 if none. Set as the
+// wake-until point when the owner Wakes mid-window, so the schedule takes back over at the next sleep.
+function nextSleepStart(settings, now = new Date()) {
+  let best = Infinity;
+  for (const r of settings.sleepRanges) {
+    if (!r.days.length || toMinutes(r.start) === toMinutes(r.end)) continue; // inactive / zero-length never sleeps
+    const startMin = toMinutes(r.start);
+    for (let ahead = 0; ahead <= 7; ahead++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + ahead);
+      d.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+      if (d.getTime() > now.getTime() && r.days.includes(d.getDay())) { best = Math.min(best, d.getTime()); break; }
+    }
+  }
+  return best === Infinity ? 0 : best;
 }
 // Read + normalize. New windows carry days[]; older {enabled,...} windows migrate (enabled = all
 // seven days, so behavior is unchanged), and anything malformed is dropped. Capped at three.
@@ -477,21 +507,25 @@ function readSleepRanges() {
 
 function currentSettings() {
   const pin = db.getSetting('pinned_id', '');
-  return {
+  const s = {
     durationMs: Number(db.getSetting('duration_ms', DEFAULT_DURATION_MS)) || DEFAULT_DURATION_MS,
     mode: db.getSetting('rotation_mode', DEFAULT_MODE),
     pinnedId: pin ? Number(pin) : null, // one piece held permanently (HANDOFF §7), or null
     sleepRanges: readSleepRanges(),     // up to three day-aware sleep windows (HANDOFF §13)
-    manualBlank: db.getSetting('manual_blank', '') === '1', // instant "Blank panel" override
+    manualBlank: db.getSetting('manual_blank', '') === '1', // manual Sleep: off until woken
+    wakeUntil: Number(db.getSetting('wake_until', '')) || 0, // manual Wake: schedule held off until this ms (0 = none)
     librarySort: db.getSetting('library_sort', db.DEFAULT_LIBRARY_SORT), // Library grid order (HANDOFF §7)
+    libraryFilter: db.getSetting('library_filter', 'all'), // Library view filter: all | rotation (HANDOFF §7)
     retroArcade,                        // runtime-only easter-egg flag (never persisted; see /api/arcade)
   };
+  s.asleep = isAsleep(s); // the live state, so the control panel can label the button Sleep/Wake by what's true now
+  return s;
 }
 
 app.get('/api/settings', (_req, res) => res.json(currentSettings()));
 
 app.put('/api/settings', (req, res) => {
-  const { durationMs, mode, sleepRanges, manualBlank, librarySort } = req.body || {};
+  const { durationMs, mode, sleepRanges, manualBlank, librarySort, libraryFilter } = req.body || {};
   if (durationMs !== undefined) {
     const ms = Number(durationMs);
     if (!Number.isFinite(ms) || ms < 1000) return res.status(400).json({ error: 'durationMs must be >= 1000' });
@@ -510,14 +544,28 @@ app.put('/api/settings', (req, res) => {
         Array.isArray(r.days) && r.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6));
     if (!ok) return res.status(400).json({ error: 'sleepRanges must be up to three {start:"HH:MM", end:"HH:MM", days:[0-6]}' });
     db.setSetting('sleep_ranges', JSON.stringify(sleepRanges.map((r) => ({ start: r.start, end: r.end, days: sanitizeDays(r.days) }))));
+    db.setSetting('wake_until', ''); // editing the schedule cancels any active manual Wake, so the new windows take effect at once
   }
   if (manualBlank !== undefined) {
     if (typeof manualBlank !== 'boolean') return res.status(400).json({ error: 'manualBlank must be a boolean' });
-    db.setSetting('manual_blank', manualBlank ? '1' : '');
+    // manualBlank is the Sleep/Wake toggle: true = Sleep now (off until woken); false = Wake now.
+    if (manualBlank) {
+      db.setSetting('manual_blank', '1');
+      db.setSetting('wake_until', '');
+    } else {
+      db.setSetting('manual_blank', '');
+      // If a sleep window is live right now, hold the schedule off until the next window begins; otherwise just wake.
+      const now = new Date(), s = currentSettings();
+      db.setSetting('wake_until', scheduledAsleep(s, now) ? String(nextSleepStart(s, now)) : '');
+    }
   }
   if (librarySort !== undefined) {
     if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|title|artist' });
     db.setSetting('library_sort', librarySort);
+  }
+  if (libraryFilter !== undefined) {
+    if (!LIBRARY_FILTERS.has(libraryFilter)) return res.status(400).json({ error: 'libraryFilter must be all|rotation' });
+    db.setSetting('library_filter', libraryFilter);
   }
   res.json(currentSettings());
 });
@@ -573,7 +621,7 @@ app.get('/api/display', (_req, res) => {
     durationMs: settings.durationMs,
     mode: settings.mode,
     pinnedId: settings.pinnedId,
-    asleep: isAsleep(settings),
+    asleep: settings.asleep,
     retroArcade: settings.retroArcade, // hidden self-playing demo: the display swaps to the canvas
   });
 });

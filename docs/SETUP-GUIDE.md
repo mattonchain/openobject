@@ -120,6 +120,11 @@ is the set that's actually showing on the wall. The control panel has three tabs
 tab to order the grid by **Recent** (newest first, the default), **Oldest**, **Title** (A to Z), or
 **Artist** (A to Z, with pieces that have no artist last). Your choice stays until you change it.
 
+**Show just what's playing.** Next to Sort is a **Show** control. Leave it on **All** to see everything,
+or switch it to **In rotation** to hide the pieces that aren't currently playing. That's handy once your
+Library has grown and you only want to see today's set. Nothing is deleted, switch back to **All** any
+time and the rest reappear.
+
 **A sample to start.** Your Library comes with one piece already in it, the **Bouncing OpenObject Logo**
 (the OpenObject wordmark drifting around the screen, an homage to the old DVD screensaver). It always sits at
 the bottom of the Library, whichever sort you pick, as the piece that came with your player. Keep it, build a
@@ -193,8 +198,9 @@ weekend lie-in, and an "I'm at the office" block can all live side by side. Set 
 are the **nights it begins** (10:00 PM to 4:00 AM on Friday means Friday night into Saturday). A little
 **week chart** underneath shades when the screen will sleep, so you can check the whole week at a glance.
 While asleep, the screen shows the OpenObject logo dimmed and stops playing, then picks the rotation
-back up on its own. **Want it off right now?** Tap **Blank screen** at the top of the control panel,
-and the art goes dark until you tap it again.
+back up on its own. **Want it off right now?** Tap **Sleep** at the top of the control panel; the same
+button reads **Wake** while the screen is off. If you tap **Wake** during a scheduled sleep, the art
+stays on until the next scheduled sleep.
 
 The **Sleep Schedule**, **Connected Collections**, **Password**, and **Wi-Fi** sections **start
 collapsed** to keep the Settings tab short. Tap a header to open one, and it stays the way you leave it.
