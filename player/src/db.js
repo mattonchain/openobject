@@ -121,6 +121,10 @@ function initDb() {
   if (!ccols.has('choice')) db.exec('ALTER TABLE collection_state ADD COLUMN choice TEXT');
   if (!ccols.has('controls')) db.exec('ALTER TABLE collection_state ADD COLUMN controls TEXT');
 
+  // The Library "Title" sort first shipped under the key "name" (its old label, 4a5bc26). Migrate a
+  // persisted value so an existing setting keeps working after the rename; the API no longer accepts "name".
+  if (getSetting('library_sort') === 'name') setSetting('library_sort', 'title');
+
   console.log(`SQLite ready (node:sqlite) → ${DB_PATH}`);
   return db;
 }
@@ -205,12 +209,13 @@ function setCollectionState(slug, patch) {
 // of the grid: the `(collection = sample) ASC` primary key always sorts the sample row last, so it sits
 // beneath the owner's own pieces however recently it was added, in every order. The ORDER BY fragments
 // are a fixed allowlist (never interpolated from user input), so there is no SQL-injection surface.
-// "name" sorts by the DISPLAYED title: a piece's custom title when set, else its filename/derived title
+// "title" sorts by the DISPLAYED title: a piece's custom title when set, else its filename/derived title
 // (the same fallback the card shows). NULLIF('') treats a blank title as unset so COALESCE falls through.
+// (This key first shipped as "name", its old UI label; initDb migrates a persisted "name" to "title".)
 const LIBRARY_SORTS = {
   recent: 'id DESC',                                  // newest first (the default)
   oldest: 'id ASC',                                   // oldest first
-  name: "COALESCE(NULLIF(title, ''), original_name) COLLATE NOCASE ASC, id DESC",  // A–Z, id tiebreaker
+  title: "COALESCE(NULLIF(title, ''), original_name) COLLATE NOCASE ASC, id DESC",  // A–Z, id tiebreaker
 };
 const DEFAULT_LIBRARY_SORT = 'recent';
 

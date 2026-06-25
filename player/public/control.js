@@ -220,7 +220,10 @@ function card(item) {
 function enterEditMeta(cardEl, item) {
   const meta = cardEl.querySelector('.meta');
   const actions = cardEl.querySelector('.actions');
-  const curTitle = item.title ? item.title : '';   // empty when unset → the placeholder shows the filename
+  // Prefill the title with the custom title when set, else the filename, so it is a reminder you can type
+  // over (titleInput.select() below highlights it) or arrow through. Clearing it back to blank still reverts
+  // to the filename on save (setLibraryMeta stores blank as NULL), so the filename is a default, not forced.
+  const curTitle = item.title && item.title.trim() ? item.title : item.original_name;
   const curArtist = item.artist ? item.artist : '';
   meta.classList.remove('editable');
   meta.classList.add('editing');

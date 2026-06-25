@@ -58,7 +58,7 @@ const DEFAULT_DURATION_MS = 8000;
 const DEFAULT_MODE = 'sequence';
 const MODES = new Set(['sequence', 'shuffle']);
 const FITS = new Set(['fit', 'fill']);
-// Library grid sort: recent (default) | oldest | name | artist. recent/oldest/name are SQL orders in
+// Library grid sort: recent (default) | oldest | title | artist. recent/oldest/title are SQL orders in
 // db.listLibrary; "artist" is resolved here (libraryByArtist) because a connected piece's artist lives in
 // the registry, not the DB row. This set just validates the persisted choice (HANDOFF §7). Every order
 // keeps the install sample anchored last.
@@ -285,13 +285,13 @@ app.post('/api/upload', ensureDiskSpace, upload.array('files'), (req, res) => {
 // (src/collections.js), not the DB row. Effective artist = the row's own `artist` (uploads) or the
 // collection's registry artist (connected), i.e. the name shown on the card. Order: the install sample
 // last (the anchor every sort keeps), then credited pieces A to Z by artist, then the un-credited at the
-// end (nulls last; HANDOFF §7), each group tiebroken by the displayed title. Built on the name-sorted list
+// end (nulls last; HANDOFF §7), each group tiebroken by the displayed title. Built on the title-sorted list
 // (sample already last, title/id tiebreak baked in) and re-sorted with a stable sort.
 function libraryByArtist() {
   const effArtist = (r) => (r.kind === 'connected' ? (collections.bySlug(r.collection) || {}).artist : r.artist) || '';
   const effTitle = (r) => (r.title && r.title.trim() ? r.title : r.original_name) || '';
   const cmp = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' });
-  return db.listLibrary('name').sort((x, y) => {
+  return db.listLibrary('title').sort((x, y) => {
     const xS = (x.collection || '') === db.INSTALL_SAMPLE_COLLECTION;
     const yS = (y.collection || '') === db.INSTALL_SAMPLE_COLLECTION;
     if (xS !== yS) return xS ? 1 : -1;                  // install sample always last
@@ -516,7 +516,7 @@ app.put('/api/settings', (req, res) => {
     db.setSetting('manual_blank', manualBlank ? '1' : '');
   }
   if (librarySort !== undefined) {
-    if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|name|artist' });
+    if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|title|artist' });
     db.setSetting('library_sort', librarySort);
   }
   res.json(currentSettings());

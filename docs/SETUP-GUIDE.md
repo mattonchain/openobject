@@ -117,7 +117,7 @@ is the set that's actually showing on the wall. The control panel has three tabs
   described below.
 
 **Sort your Library.** As your collection grows, use the **Sort** control on the right of the Library
-tab to order the grid by **Recent** (newest first, the default), **Oldest**, **Name** (A to Z), or
+tab to order the grid by **Recent** (newest first, the default), **Oldest**, **Title** (A to Z), or
 **Artist** (A to Z, with pieces that have no artist last). Your choice stays until you change it.
 
 **A sample to start.** Your Library comes with one piece already in it, the **Bouncing OpenObject Logo**
