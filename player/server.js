@@ -58,9 +58,11 @@ const DEFAULT_DURATION_MS = 8000;
 const DEFAULT_MODE = 'sequence';
 const MODES = new Set(['sequence', 'shuffle']);
 const FITS = new Set(['fit', 'fill']);
-// Library grid sort: recent (default) | oldest | name. The order itself lives in db.listLibrary; here we
-// just validate the persisted choice (HANDOFF §7). Every order keeps the install sample anchored last.
-const LIBRARY_SORTS = new Set(Object.keys(db.LIBRARY_SORTS));
+// Library grid sort: recent (default) | oldest | name | artist. recent/oldest/name are SQL orders in
+// db.listLibrary; "artist" is resolved here (libraryByArtist) because a connected piece's artist lives in
+// the registry, not the DB row. This set just validates the persisted choice (HANDOFF §7). Every order
+// keeps the install sample anchored last.
+const LIBRARY_SORTS = new Set([...Object.keys(db.LIBRARY_SORTS), 'artist']);
 
 // Sleep Schedule (HANDOFF §13): up to three day-aware windows, each with its own days of the
 // week; the panel blanks to the dimmed mark while inside an active window (or while manually
@@ -279,8 +281,29 @@ app.post('/api/upload', ensureDiskSpace, upload.array('files'), (req, res) => {
 });
 
 // ── Library API ─────────────────────────────────────────────────────
+// "Artist" sort lives here, not in db.listLibrary, because a connected piece's artist is in the registry
+// (src/collections.js), not the DB row. Effective artist = the row's own `artist` (uploads) or the
+// collection's registry artist (connected), i.e. the name shown on the card. Order: the install sample
+// last (the anchor every sort keeps), then credited pieces A to Z by artist, then the un-credited at the
+// end (nulls last; HANDOFF §7), each group tiebroken by the displayed title. Built on the name-sorted list
+// (sample already last, title/id tiebreak baked in) and re-sorted with a stable sort.
+function libraryByArtist() {
+  const effArtist = (r) => (r.kind === 'connected' ? (collections.bySlug(r.collection) || {}).artist : r.artist) || '';
+  const effTitle = (r) => (r.title && r.title.trim() ? r.title : r.original_name) || '';
+  const cmp = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+  return db.listLibrary('name').sort((x, y) => {
+    const xS = (x.collection || '') === db.INSTALL_SAMPLE_COLLECTION;
+    const yS = (y.collection || '') === db.INSTALL_SAMPLE_COLLECTION;
+    if (xS !== yS) return xS ? 1 : -1;                  // install sample always last
+    const xa = effArtist(x), ya = effArtist(y);
+    if (!xa !== !ya) return xa ? -1 : 1;                // un-credited (blank) artist last
+    return cmp(xa, ya) || cmp(effTitle(x), effTitle(y)); // by artist, then displayed title
+  });
+}
+
 app.get('/api/library', (_req, res) => {
-  res.json(db.listLibrary(db.getSetting('library_sort', db.DEFAULT_LIBRARY_SORT)));
+  const sort = db.getSetting('library_sort', db.DEFAULT_LIBRARY_SORT);
+  res.json(sort === 'artist' ? libraryByArtist() : db.listLibrary(sort));
 });
 
 // Per-clip Fit/Fill (§6), Rotation membership (§7), and optional title/artist (§7). Any subset may be sent.
@@ -493,7 +516,7 @@ app.put('/api/settings', (req, res) => {
     db.setSetting('manual_blank', manualBlank ? '1' : '');
   }
   if (librarySort !== undefined) {
-    if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|name' });
+    if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|name|artist' });
     db.setSetting('library_sort', librarySort);
   }
   res.json(currentSettings());

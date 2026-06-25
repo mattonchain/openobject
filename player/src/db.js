@@ -308,6 +308,7 @@ module.exports = {
   setLibraryRotation,
   reorderRotation,
   deleteLibraryItem,
+  INSTALL_SAMPLE_COLLECTION,
   DATA_DIR,
   UPLOADS_DIR,
   DB_PATH,
