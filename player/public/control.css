@@ -435,7 +435,19 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .empty { color: var(--muted); padding: 24px 2px; }
 
 /* Library / Rotation / Settings tabs — sit at the top, directly under the header */
-.tabs { display: flex; gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--line); }
+/* Tabs + the Library sort share one row, sitting on a single bottom border. align-items:flex-end rests
+   the shorter sort control on that line beside the taller tabs, so on any width that fits both it grows
+   nothing vertically (the grid never shifts down). margin-left:auto right-aligns the sort; flex-wrap lets
+   it drop to its own compact right-aligned line on a narrow phone where tabs + sort can't share one line
+   (the only case the grid shifts, mobile-only) instead of overflowing or clipping. */
+.tabrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 12px; margin-top: 8px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; }
+/* Library sort: a muted "Sort" label + a compact select, matching the connected-control selects. Shown
+   only on the Library tab (control.js toggles [hidden]); right-aligned, lifted off the border line. */
+.lib-sort { display: inline-flex; align-items: center; gap: 7px; margin: 0 2px 7px auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.lib-sort[hidden] { display: none; }
+.lib-sort-select { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; cursor: pointer; }
+.lib-sort-select:hover { border-color: #4a4a52; }
 .tab {
   appearance: none;
   border: 0;
@@ -447,6 +459,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   font-size: 15px;
   cursor: pointer;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;   /* keep the count beside its label, never wrapped under it */
 }
 .tab:hover { color: var(--text); }
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }

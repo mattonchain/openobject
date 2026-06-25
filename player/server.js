@@ -58,6 +58,9 @@ const DEFAULT_DURATION_MS = 8000;
 const DEFAULT_MODE = 'sequence';
 const MODES = new Set(['sequence', 'shuffle']);
 const FITS = new Set(['fit', 'fill']);
+// Library grid sort: recent (default) | oldest | name. The order itself lives in db.listLibrary; here we
+// just validate the persisted choice (HANDOFF §7). Every order keeps the install sample anchored last.
+const LIBRARY_SORTS = new Set(Object.keys(db.LIBRARY_SORTS));
 
 // Sleep Schedule (HANDOFF §13): up to three day-aware windows, each with its own days of the
 // week; the panel blanks to the dimmed mark while inside an active window (or while manually
@@ -277,7 +280,7 @@ app.post('/api/upload', ensureDiskSpace, upload.array('files'), (req, res) => {
 
 // ── Library API ─────────────────────────────────────────────────────
 app.get('/api/library', (_req, res) => {
-  res.json(db.listLibrary());
+  res.json(db.listLibrary(db.getSetting('library_sort', db.DEFAULT_LIBRARY_SORT)));
 });
 
 // Per-clip Fit/Fill (§6) and Rotation membership (§7). Either or both may be sent.
@@ -445,6 +448,7 @@ function currentSettings() {
     pinnedId: pin ? Number(pin) : null, // one piece held permanently (HANDOFF §7), or null
     sleepRanges: readSleepRanges(),     // up to three day-aware sleep windows (HANDOFF §13)
     manualBlank: db.getSetting('manual_blank', '') === '1', // instant "Blank panel" override
+    librarySort: db.getSetting('library_sort', db.DEFAULT_LIBRARY_SORT), // Library grid order (HANDOFF §7)
     retroArcade,                        // runtime-only easter-egg flag (never persisted; see /api/arcade)
   };
 }
@@ -452,7 +456,7 @@ function currentSettings() {
 app.get('/api/settings', (_req, res) => res.json(currentSettings()));
 
 app.put('/api/settings', (req, res) => {
-  const { durationMs, mode, sleepRanges, manualBlank } = req.body || {};
+  const { durationMs, mode, sleepRanges, manualBlank, librarySort } = req.body || {};
   if (durationMs !== undefined) {
     const ms = Number(durationMs);
     if (!Number.isFinite(ms) || ms < 1000) return res.status(400).json({ error: 'durationMs must be >= 1000' });
@@ -475,6 +479,10 @@ app.put('/api/settings', (req, res) => {
   if (manualBlank !== undefined) {
     if (typeof manualBlank !== 'boolean') return res.status(400).json({ error: 'manualBlank must be a boolean' });
     db.setSetting('manual_blank', manualBlank ? '1' : '');
+  }
+  if (librarySort !== undefined) {
+    if (!LIBRARY_SORTS.has(librarySort)) return res.status(400).json({ error: 'librarySort must be recent|oldest|name' });
+    db.setSetting('library_sort', librarySort);
   }
   res.json(currentSettings());
 });

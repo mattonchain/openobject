@@ -10,6 +10,8 @@ const emptyEl = document.getElementById('empty');
 const statusEl = document.getElementById('status');
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('file');
+const libSort = document.getElementById('libSort');     // Library sort control (tab row; Library tab only)
+const sortSelect = document.getElementById('sortSelect');
 
 const durationEl = document.getElementById('duration');
 const durDown = document.getElementById('durDown');
@@ -83,6 +85,7 @@ const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" strok
 
 let pinnedId = null;
 let mode = 'sequence';
+let librarySort = 'recent'; // Library grid order: recent (default) | oldest | name (HANDOFF §7)
 let durationUnit = 'seconds';
 let rotationItems = []; // last-loaded Rotation, in order — drives the ↑/↓ moves
 let sleepRanges = []; // up to three day-aware sleep windows (HANDOFF §13)
@@ -194,6 +197,15 @@ async function loadLibrary() {
   grid.replaceChildren(...items.map(card));
   libCount.textContent = items.length ? String(items.length) : '';
   emptyEl.hidden = items.length > 0;
+}
+
+// Library sort: persist the choice (a server setting, so it sticks across reloads and devices until
+// changed), then re-fetch the grid in the new order. The server applies the order and keeps the
+// install sample anchored to the bottom in every option (HANDOFF §7).
+async function setLibrarySort(value) {
+  librarySort = value;
+  await saveSettings({ librarySort: value });
+  await loadLibrary();
 }
 
 // ── Rotation tab ────────────────────────────────────────────────────
@@ -360,6 +372,8 @@ async function loadSettings() {
   setSeg(unitSeg, 'unit', durationUnit);
   mode = s.mode;
   setSeg(modeSeg, 'mode', mode);
+  librarySort = s.librarySort || 'recent';
+  sortSelect.value = librarySort;
   pinnedId = s.pinnedId;
   sleepRanges = (s.sleepRanges || []).map((r) => ({ start: r.start, end: r.end, days: Array.isArray(r.days) ? r.days.slice() : [] }));
   manualBlank = !!s.manualBlank;
@@ -1135,6 +1149,7 @@ function switchTab(name) {
     tab.setAttribute('aria-selected', String(on));
     panel.hidden = !on;
   }
+  libSort.hidden = name !== 'library'; // the sort only applies to the Library grid
 }
 Object.keys(TABS).forEach((name) => TABS[name][0].addEventListener('click', () => switchTab(name)));
 
@@ -1149,6 +1164,7 @@ unitSeg.querySelectorAll('button').forEach((b) =>
 modeSeg.querySelectorAll('button').forEach((b) =>
   b.addEventListener('click', () => { mode = b.dataset.mode; setSeg(modeSeg, 'mode', mode); saveSettings({ mode }); loadRotation(); })
 );
+sortSelect.addEventListener('change', () => setLibrarySort(sortSelect.value));
 blankBtn.addEventListener('click', toggleBlank);
 sleepAddBtn.addEventListener('click', addSleepTime);
 

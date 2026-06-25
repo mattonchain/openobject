@@ -23,18 +23,30 @@
   </header>
 
   <main class="wrap">
-    <!-- Tabs first: Library (everything uploaded) · Rotation (curated subset + how it cycles) · Settings -->
-    <nav class="tabs" role="tablist" aria-label="Sections">
-      <button type="button" class="tab" id="tabLibrary" role="tab" aria-selected="true" aria-controls="panelLibrary">
-        Library <span class="tab-count" id="libCount"></span>
-      </button>
-      <button type="button" class="tab" id="tabRotation" role="tab" aria-selected="false" aria-controls="panelRotation">
-        Rotation <span class="tab-count" id="rotCount"></span>
-      </button>
-      <button type="button" class="tab" id="tabSettings" role="tab" aria-selected="false" aria-controls="panelSettings">
-        Settings
-      </button>
-    </nav>
+    <!-- Tabs first: Library (everything uploaded) · Rotation (curated subset + how it cycles) · Settings.
+         The Library sort sits on this same row (right-aligned), shown only on the Library tab, so it never
+         pushes the grid down the scroll (HANDOFF §7). -->
+    <div class="tabrow">
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" class="tab" id="tabLibrary" role="tab" aria-selected="true" aria-controls="panelLibrary">
+          Library <span class="tab-count" id="libCount"></span>
+        </button>
+        <button type="button" class="tab" id="tabRotation" role="tab" aria-selected="false" aria-controls="panelRotation">
+          Rotation <span class="tab-count" id="rotCount"></span>
+        </button>
+        <button type="button" class="tab" id="tabSettings" role="tab" aria-selected="false" aria-controls="panelSettings">
+          Settings
+        </button>
+      </nav>
+      <label class="lib-sort" id="libSort">
+        <span class="lib-sort-label">Sort</span>
+        <select id="sortSelect" class="lib-sort-select" aria-label="Sort the Library">
+          <option value="recent">Recent</option>
+          <option value="oldest">Oldest</option>
+          <option value="name">Name</option>
+        </select>
+      </label>
+    </div>
 
     <section class="panel" id="panelLibrary" role="tabpanel" aria-labelledby="tabLibrary">
       <!-- Web upload — the default source (HANDOFF §8). Lives in the Library tab: uploading IS a Library action. -->

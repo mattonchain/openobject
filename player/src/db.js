@@ -194,12 +194,25 @@ function setCollectionState(slug, patch) {
     .run(slug, hidden, animate, speed, choice, controls);
 }
 
-// Library grid shows newest first, with the install sample anchored to the bottom (INSTALL_SAMPLE_COLLECTION):
-// non-sample pieces sort by id DESC (newest first), then the sample row last, so it sits beneath the owner's
-// own pieces however recently it was added. Sort-only; the Rotation is the curated subset in its own order.
-function listLibrary() {
+// Library grid sort options (HANDOFF §7). Every order keeps the install sample anchored to the BOTTOM
+// of the grid: the `(collection = sample) ASC` primary key always sorts the sample row last, so it sits
+// beneath the owner's own pieces however recently it was added, in every order. The ORDER BY fragments
+// are a fixed allowlist (never interpolated from user input), so there is no SQL-injection surface.
+// "name" sorts by the displayed title (original_name); when uploaded pieces gain an optional custom Title
+// later, change that key to COALESCE(title, original_name) COLLATE NOCASE and the anchoring still holds.
+const LIBRARY_SORTS = {
+  recent: 'id DESC',                                  // newest first (the default)
+  oldest: 'id ASC',                                   // oldest first
+  name: 'original_name COLLATE NOCASE ASC, id DESC',  // A–Z, id as a stable tiebreaker for equal names
+};
+const DEFAULT_LIBRARY_SORT = 'recent';
+
+// Sort-only; the Rotation is the curated subset in its own order (listRotation). An unknown/blank sort
+// falls back to the default, so a stale value never breaks the grid.
+function listLibrary(sort) {
+  const order = LIBRARY_SORTS[sort] || LIBRARY_SORTS[DEFAULT_LIBRARY_SORT];
   return getDb()
-    .prepare("SELECT * FROM library ORDER BY (COALESCE(collection, '') = ?) ASC, id DESC")
+    .prepare(`SELECT * FROM library ORDER BY (COALESCE(collection, '') = ?) ASC, ${order}`)
     .all(INSTALL_SAMPLE_COLLECTION);
 }
 function listRotation() {
@@ -269,6 +282,8 @@ module.exports = {
   getCollectionState,
   setCollectionState,
   listLibrary,
+  LIBRARY_SORTS,
+  DEFAULT_LIBRARY_SORT,
   listRotation,
   getLibraryItem,
   setLibraryFit,
