@@ -126,9 +126,11 @@ Library has grown and you only want to see today's set. Nothing is deleted, swit
 time and the rest reappear.
 
 **A sample to start.** Your Library comes with one piece already in it, the **Bouncing OpenObject Logo**
-(the OpenObject wordmark drifting around the screen, an homage to the old DVD screensaver). It always sits at
-the bottom of the Library, whichever sort you pick, as the piece that came with your player. Keep it, build a
-Rotation around it, or remove it like any other piece.
+(the OpenObject wordmark drifting around the screen, an homage to the old DVD screensaver). It starts **out of
+the Rotation**, so a brand-new player opens on the OpenObject screen (the logo, with an "add art" hint) instead
+of jumping straight into the sample. Add it to the Rotation whenever you want to watch it, or just leave it as
+an example and build your Rotation from your own art. It always sits at the bottom of the Library, whichever
+sort you pick, as the piece that came with your player, and you can remove it like any other piece.
 
 **Order.** Choose how the Rotation plays:
 

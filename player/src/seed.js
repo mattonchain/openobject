@@ -2,10 +2,11 @@
 
 // First-run seed: every install ships with the Bouncing OpenObject Logo (the sample piece, HANDOFF §20).
 // On first boot we copy its committed bundle (player/seed/<slug>/) into the runtime collections dir and add
-// a normal Library row, so a fresh install greets the owner with art and needs NO network to do it — the
-// bundle is shipped, not fetched, so the install is self-contained (mission: depends on no external service).
-// From then on it is an ordinary connected piece (Rotation, Pin, and the bottom-of-Library sort anchor in
-// db.listLibrary all apply).
+// a Library row, so a fresh install has a piece to try with NO network (the bundle is shipped, not fetched,
+// so the install is self-contained; mission: depends on no external service).
+// It is seeded DORMANT (out of the Rotation): a fresh install boots to the branded idle/splash screen, and
+// the owner opts the sample into the Rotation when they want it. From then on it is an ordinary connected
+// piece (Rotation, Pin, and the bottom-of-Library sort anchor in db.listLibrary all apply).
 //
 // Gated by a setting so it runs once: an install that already has the piece (e.g. a frame where it was added
 // by hand) is adopted (flag set, no duplicate), and a piece the owner later deletes is never re-seeded.
@@ -42,7 +43,7 @@ function seedSampleIfNeeded() {
     }
     const thumbRel = path.posix.join('thumbs', `${tokenId}.png`);
     const thumb = fs.existsSync(path.join(dest, thumbRel)) ? `/collections/${collection}/${thumbRel}` : null;
-    db.addConnectedItem({ filename, title, source_url: sourceUrl, collection, token_id: tokenId, thumb });
+    db.addConnectedItem({ filename, title, source_url: sourceUrl, collection, token_id: tokenId, thumb, in_rotation: 0 });
     db.setSetting(SEEDED_KEY, '1');
     console.log(`Seeded the sample piece: ${title}`);
   } catch (e) {

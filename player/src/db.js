@@ -167,13 +167,16 @@ function addLibraryItem(item) {
 
 // Connected artwork: a Library row sourced from a hosted/on-chain URL (no uploaded file).
 // filename is a synthetic unique key (so the same piece can't be added twice); bytes is 0.
+// in_rotation defaults to 1 (a normal add lands in the Rotation); pass 0 to add it dormant
+// (used by the first-run seed, so a fresh install boots to the idle screen, not the sample).
 function addConnectedItem(item) {
+  const inRotation = item.in_rotation === undefined ? 1 : item.in_rotation ? 1 : 0;
   const info = getDb()
     .prepare(
       `INSERT INTO library (filename, original_name, mime, format, kind, bytes, in_rotation, position, source_url, collection, token_id, thumb)
-       VALUES (?, ?, 'text/html', 'connected', 'connected', 0, 1, (SELECT COALESCE(MAX(position), -1) + 1 FROM library WHERE in_rotation = 1), ?, ?, ?, ?)`
+       VALUES (?, ?, 'text/html', 'connected', 'connected', 0, ?, (SELECT COALESCE(MAX(position), -1) + 1 FROM library WHERE in_rotation = 1), ?, ?, ?, ?)`
     )
-    .run(item.filename, item.title, item.source_url, item.collection, item.token_id, item.thumb ?? null);
+    .run(item.filename, item.title, inRotation, item.source_url, item.collection, item.token_id, item.thumb ?? null);
   return getLibraryItem(Number(info.lastInsertRowid));
 }
 
