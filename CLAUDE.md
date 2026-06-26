@@ -12,17 +12,20 @@ controlled from a web page, depends on no external service. Mission: **revivable
 by the next stranded XXL owner**, favor "anyone can follow the guide" over
 builder-only convenience.
 
-## Hard constraints (this build)
-- **No hardware yet.** The MeLE unit is not accessible (waiting on USB hardware).
-  **Do not plan around hardware access.** Bias everything toward what runs and is
-  visible in a browser on macOS. Hardware work is **Phase 2**, later.
+## Hard constraints
+- **The frame is real, but remote.** Hardware is no longer a blocker: the wiped
+  mini PC runs the OpenObject Linux kiosk, verified on Matt's actual XXL, with
+  over-the-air self-update. But it is **not reachable from this dev environment**
+  (sandboxed, no LAN access). For any on-frame op (SSH, `scp`, `systemctl`, kiosk),
+  hand Matt the exact command to run; do **not** try to run it here. Day-to-day app
+  work is still done browser-visible on macOS.
 - **Two docs, kept in lockstep.** Any change to user-facing behavior updates
   **`docs/SETUP-GUIDE.md`** in the *same change* as `docs/HANDOFF.md`. The Setup
   Guide must always reflect shipped behavior (HANDOFF §16).
-- **§19 placeholders are sacred.** Do **not** invent hardware model numbers, bench
-  specs, eMMC sizes, BIOS-entry keys, or Auto-Power-On labels, they come from
-  Matt at the bench. Mark unknowns clearly as placeholders. (The logo is now
-  supplied, see Branding.)
+- **Don't invent hardware specs.** Most §19 bench items are now confirmed on the
+  real frame (models, BIOS-entry key, CPU, eMMC, Wi-Fi module, the 1920×1920 panel);
+  the lone open one is **RAM**. Mark any genuinely-unknown spec as a clear
+  placeholder rather than guessing, this is a public repo.
 - **Art never touches the repo.** Uploaded images/videos and the local library are
   gitignored runtime data, never committed (HANDOFF §8, §15).
 - **Repo is PUBLIC** (source available for noncommercial use under PolyForm
@@ -61,7 +64,8 @@ builder-only convenience.
   buffered/least-recently-shown eviction mode is a documented seam, off by default.
 - **Source layer is a clean interface.** v1 ships **web upload** and **Connected
   Collections**, a curated on-chain/NFT resolver that is now a **core feature** (HANDOFF
-  §8). SMB pull and a general "paste any URL" resolver remain seams, **not built** in v1.
+  §8). SMB pull stays an optional seam (not built); a general "paste any URL" / live
+  on-chain resolver was considered and **dropped** (HANDOFF §17/§20).
 - **Sleep Schedule** (optional overnight/away blank/dim, by day of week) is a v1 feature.
 
 ## Formats (v1)
@@ -72,35 +76,36 @@ do not error) everything else, HEIC, PSD, raw, GLB, and OS noise (`.DS_Store`, o
 etc.). Uploads stay byte-for-byte.
 
 ## Branding
-The **OPEN / OBJECT** wordmark lives in `assets/branding/` (optimized opaque PNGs;
-large source masters stay in `Logo/`, gitignored). **Phase 1:** vectorize the high-res
-master (`Logo/logo-2k.png`, falling back to `logo_orig.png` if the 2k turns out a soft
-upscale rather than added detail) with **Potrace → `openobject-logo.svg`**, single-color and
-transparent, so CSS recolors it white-on-dark (idle/boot screen) or black-on-light;
-derive transparent PNG exports from it as needed. A plain raster color-inverse is
-*not* the plan (Matt handles that in Photoshop if ever needed). **SVG here is a
-UI/brand asset**; displayed user *art* in SVG is now supported too, rendered as a safe
-image (see Formats / §6). Aesthetic: understated, functional, no clutter.
+The **OPEN / OBJECT** wordmark lives in `assets/branding/`: **`openobject-logo.svg`**
+(single-color, transparent, traced from the high-res master with Potrace) plus its PNG
+exports (`openobject-logo-256/512.png`, favicons, apple-touch-icon). Large source masters
+stay in `Logo/` (gitignored). CSS recolors the SVG white-on-dark (idle/boot screen) or
+black-on-light; it is wired into the player's display and control pages. A plain raster
+color-inverse is *not* the plan (Matt handles that in Photoshop if ever needed). **SVG
+here is a UI/brand asset**; displayed user *art* in SVG is supported too, rendered as a
+safe image (see Formats / §6). Aesthetic: understated, functional, no clutter.
 
 ## Phases
-- **Phase 0**, repo, structure, docs, CLAUDE.md, GitHub. *(done)*
-- **Phase 1** *(current)*, the Mac-testable web app: server, library/upload, control
-  panel, display page + behaviors, progressive sync, sleep schedule, **self-update from
-  GitHub**. All visible in a browser on macOS. Hardware-only features
-  (Restart/Shutdown, Wi-Fi onboarding) ship as visible-but-inert stubs.
-- **Phase 2** *(when hardware arrives)*, lightweight Debian-based Linux, Chromium
-  kiosk, Wi-Fi onboarding AP + captive page, mDNS, BIOS Auto-Power-On, real
-  restart/shutdown, optional SMB pull, bootable USB installer, prebuilt image as a
-  GitHub Release asset. Fill every §19 placeholder from the bench.
+The phases are layers, not a queue: both the app and the frame kiosk are live today.
+- **Phase 0** (repo, structure, docs, GitHub): **done.**
+- **Phase 1**, the web app (server, library/upload, control panel, display + behaviors,
+  progressive sync, sleep schedule, Connected Collections, self-update from GitHub):
+  **done, shipped as v1.0.0.** Runs browser-visible on macOS or any computer.
+- **Phase 2**, the frame (Debian-based Linux, Chromium kiosk, Avahi/mDNS, BIOS
+  Auto-Power-On, real device power, the install path): **built and verified on the real
+  XXL**, with OTA self-update. A few later milestones remain (authoritative list in the
+  HANDOFF status line + §20): notably a **single-file/prebuilt release image** (USB
+  installer as a GitHub Release asset) and **Wi-Fi onboarding** (AP + captive page).
+  SMB pull stays an optional seam.
 
-## Running the player (Phase 1)
+## Running the player
 ```
 cd player && npm install && npm start
 ```
-Then open **http://localhost:3000/**, the control panel (web upload + Library so far).
-The kiosk display is at **/display** (black, edge-to-edge stage; the branded idle screen
-until art is in the rotation). Separate routes so Chromium kiosk can point straight at
-the display later.
+Then open **http://localhost:3000/**, the control panel (Library, Rotation, Settings,
+Connected Collections, Sleep, Software Update). The kiosk display is at **/display**
+(black, edge-to-edge stage; the branded idle screen until art is in the rotation).
+Separate routes, so the Chromium kiosk on the frame points straight at the display.
 
 Uses Node's built-in **`node:sqlite`** (Node ≥ 22.5), no native module, no build step.
 Runtime data (the library DB under `player/data/`, uploads) is gitignored (HANDOFF §8).
