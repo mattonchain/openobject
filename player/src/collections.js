@@ -26,8 +26,15 @@ const REGISTRY = [
     contract: '0x61d115f1a3b08f871A1171041C9AF5bb5f747e47',
     // One free read call (tokenURI) goes through a public Ethereum node. Swappable; many exist.
     rpc: 'https://ethereum-rpc.publicnode.com',
-    // This collection animates on load via its global toggleRotation() (its "Toggle Rotation" menu).
+    // This collection animates on load via its global toggleRotation() (called directly by the animate
+    // hook, not the menu below).
     animateDefault: true,
+    // The bundle carries a hover/tap export menu (#menu-hover: Save PNG / Print Sheet / Toggle Rotation)
+    // meant for standalone desktop use. On the display that is stray chrome — a tap (mobile) or a corner
+    // hover (desktop) pops it over the art, and controls belong in the panel's Connected Collections, not
+    // on the stage (§6). Hiding it (display:none) takes it out of hover and tap entirely; the programmatic
+    // toggleRotation() animate path is unaffected. Only this collection ships such a menu.
+    hideSelectors: ['#menu-hover'],
   },
   {
     slug: 'as-the-days-go-by',
@@ -99,6 +106,13 @@ const REGISTRY = [
     // The token's official `image` is a stylised half-grey/half-colour split preview; show a
     // full-colour thumbnail (the master photo the sketch loads) instead, matching the rest state.
     thumbFromAnimationImage: true,
+    // p5.js shows its built-in loading screen (#p5_loading, styled purple in this bundle) while it
+    // preloads the 5MB sketch + 5MB photo. The display reveals a connected piece on the iframe's `load`,
+    // which fires before p5 finishes that preload, so the loading text flashes during the crossfade into
+    // this heavy piece. Hide it from the first paint (the same seam as Lost in Moffat County's #p5_loading
+    // and The Bloom's #startOverlay): a brief blank while the photo settles replaces the stray text,
+    // keeping the stage chrome-free (§6).
+    hideSelectors: ['#p5_loading'],
   },
   {
     slug: 'perfect-everything',
