@@ -113,11 +113,6 @@ const REGISTRY = [
     // and The Bloom's #startOverlay): a brief blank while the photo settles replaces the stray text,
     // keeping the stage chrome-free (§6).
     hideSelectors: ['#p5_loading'],
-    // The sketch reads the whole canvas back every frame (filter(GRAY) for the crossfade); on WebKit/Safari
-    // a GPU-backed canvas tile-corrupts under that (gray/black blocks on iPhone/iPad, perfect on Chromium).
-    // Force a CPU-backed canvas (willReadFrequently) so the readback no longer corrupts; identical visual and
-    // motion on every engine (see CPU_CANVAS_PATCH). The only connected piece that needs this so far.
-    cpuCanvas: true,
   },
   {
     slug: 'perfect-everything',
@@ -579,29 +574,6 @@ const SPEED_HOOK = `
 })();
 </script>`;
 
-// Injected into the <head> of a collection flagged `cpuCanvas` (Golden Lining), BEFORE the sketch creates
-// its canvas. The piece reads its whole canvas back every frame (filter(GRAY) drives the b&w<->colour
-// crossfade), and WebKit/Safari tile-corrupts a GPU-backed canvas doing that on a large surface (gray/black
-// blocks on iPhone/iPad; perfect on Chromium). willReadFrequently forces a CPU-backed canvas, which is
-// read-friendly and not tiled, so the readback no longer corrupts and the visual is IDENTICAL on every
-// engine (no resolution or motion change — the speed sweep and draw() are untouched). p5 1.x gives no
-// canvas-attribute hook, so this patches getContext (only 2d, only when unset, so p5's internal buffers
-// inherit it too). Serve-side render fix only; the desktop archival bundle stays verbatim. Faithful to the
-// artist's VISUAL RESULT, which a corrupted render is not.
-const CPU_CANVAS_PATCH = `
-<script>
-(function(){
-  var orig = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function(type, attrs){
-    if (type === '2d') {
-      attrs = attrs || {};
-      if (attrs.willReadFrequently === undefined) attrs.willReadFrequently = true;
-    }
-    return orig.call(this, type, attrs);
-  };
-})();
-</script>`;
-
 // Injected into "Lost in Moffat County" (Jeremy Booth): the piece is a time-aware day/night photo that
 // also has a click "easter egg" (its touchEnded toggles a global `easterEgg`, swapping in an animated GIF
 // overlay). With ?ooanim=1 (Animate on) we engage that overlay hands-free: wait until the sketch's setup()
@@ -848,15 +820,6 @@ async function mirrorInto(c, out, sourceUrl) {
   if (c && Array.isArray(c.hideSelectors) && c.hideSelectors.length) {
     const css = `<style>${c.hideSelectors.join(',')}{display:none!important}</style>`;
     html = html.includes('</head>') ? html.replace('</head>', css + '\n</head>') : css + html;
-  }
-
-  // Force a CPU-backed 2D canvas (willReadFrequently) for a `cpuCanvas` collection (Golden Lining), so a
-  // per-frame full-canvas readback no longer tile-corrupts on WebKit/Safari (see CPU_CANVAS_PATCH). Installed
-  // at the very start of <head>, before the sketch's canvas exists. Serve-side only; the archive stays verbatim.
-  if (c && c.cpuCanvas) {
-    html = /<head[^>]*>/i.test(html)
-      ? html.replace(/<head[^>]*>/i, (m) => m + '\n' + CPU_CANVAS_PATCH)
-      : CPU_CANVAS_PATCH + html;
   }
 
   // Inject the matching hook (engaged by ?oochoice / ?ooanim / ?oospeed at display time): a choice
