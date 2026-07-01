@@ -1,10 +1,26 @@
 'use strict';
 
-// OpenObject player — web server.
+// OpenObject player — web server. This process is the HOST role (see below).
+//
+// Three roles, one engine (HANDOFF §20, 2026-07-01; MAC-APP-PLAN §2). OpenObject has a single
+// shared engine (this player/) that runs byte-for-byte the same on the XXL frame and on a Mac;
+// what differs between deployments is only the packaging shell around it. The engine's behavior
+// splits into three roles:
+//   • HOST    — owns the Library + Rotation, serves the API and /display. THIS server. The XXL is
+//               always a Host; a Mac can optionally be one. Binds the LAN (0.0.0.0) so any Display
+//               or Control client on the network can reach it.
+//   • DISPLAY — renders exactly one Host's /display, full screen, zero chrome. The XXL kiosk, a Mac
+//               Chrome window, and a future Apple TV are each a Display. It targets whichever Host
+//               served its page (display.js fetches same-origin), so "which Host" is chosen by the
+//               URL the Display is pointed at, not by anything in here.
+//   • CONTROL — the web control panel (/). Already Host-agnostic: any browser on the network can
+//               drive any Host.
+// Naming the roles is vocabulary only; the code already works this way. It is the seam the Mac app
+// and the future tvOS client both fall out of (one Host discoverable on the LAN, many Displays).
 //
 // Serves the player's web surfaces from the player itself (HANDOFF §5):
-//   • the control panel (/)        — upload, library, rotation settings, pin
-//   • the display page  (/display) — the edge-to-edge kiosk stage Chromium points at
+//   • the control panel (/)        — Control role: upload, library, rotation settings, pin
+//   • the display page  (/display) — Display role: the edge-to-edge kiosk stage Chromium points at
 // No build step: the front-end is plain static files (HANDOFF §5).
 
 const path = require('path');
