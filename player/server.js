@@ -36,6 +36,8 @@ const { classify } = require('./src/formats');
 const updater = require('./src/updater');
 const collections = require('./src/collections');
 const seed = require('./src/seed');
+const identity = require('./src/identity');
+const discovery = require('./src/discovery');
 const RESTART_CODE = require('./src/restart-code');
 
 // Set by the supervisor (HANDOFF §15). When supervised, the player may exit to auto-relaunch
@@ -203,7 +205,10 @@ const isAuthed = (req) => validToken(cookies(req)[SESSION_COOKIE]);
 // (/api/display), the liveness probe (/healthz, not under /api/), and the auth endpoints needed
 // to log in. Pages, brand assets, and uploaded media stay open so the kiosk and the login screen
 // work with no credential. With no password set this returns immediately (open frame).
-const AUTH_OPEN = new Set(['/api/display', '/api/auth/status', '/api/auth/login', '/api/auth/logout']);
+// /api/identity stays open: it exposes only what the Bonjour TXT records already broadcast
+// unauthenticated (id, name, version, role), so a Host stays discoverable-by-name even behind a
+// password. It carries nothing a password protects.
+const AUTH_OPEN = new Set(['/api/display', '/api/identity', '/api/auth/status', '/api/auth/login', '/api/auth/logout']);
 function authGate(req, res, next) {
   if (!authRequired()) return next();
   if (!req.path.startsWith('/api/')) return next();
@@ -736,11 +741,22 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'control.html'));
 });
 
+// Who is this Host? (HANDOFF §20; MAC-APP-PLAN §A3.) The discovery surface: a Display or Control
+// client browsing the network reads this to name a Host and tell it apart from others. Same fields
+// as the Bonjour TXT records. Open (see AUTH_OPEN) so a Host is discoverable-by-name behind a
+// password. `role` is 'host' because this server is always the Host (server.js header).
+app.get('/api/identity', (_req, res) => {
+  const me = identity.identity();
+  res.json({ id: me.id, name: me.name, role: 'host', version: require('./package.json').version, port: PORT });
+});
+
 // Liveness probe — also how the Phase-1 self-update flow confirms the player came back up
 // after restarting itself: `commit` is this checkout's HEAD, so the control panel can tell a
-// new version is live (HANDOFF §15).
+// new version is live (HANDOFF §15). Carries the Host id/name too so one probe both confirms
+// liveness and says who answered.
 app.get('/healthz', (_req, res) => {
-  res.json({ ok: true, app: 'openobject', version: require('./package.json').version, commit: updater.cachedCommitSync(), boot: BOOT_ID });
+  const me = identity.identity();
+  res.json({ ok: true, app: 'openobject', id: me.id, name: me.name, version: require('./package.json').version, commit: updater.cachedCommitSync(), boot: BOOT_ID });
 });
 
 // JSON error responses for the API (e.g. multer rejections) instead of HTML stack traces.
@@ -765,5 +781,19 @@ updater.refreshCommitCache().finally(() => {
     console.log(`  • control  →  http://localhost:${PORT}/`);
     console.log(`  • display  →  http://localhost:${PORT}/display`);
     console.log(`  • version  →  ${require('./package.json').version} (commit ${updater.cachedCommitSync() || '—'})${SUPERVISED ? ' · supervised' : ''}`);
+
+    // Advertise this Host over Bonjour/mDNS so Displays/Controls can find it (MAC-APP-PLAN §A2).
+    // Best-effort and off the playback path: discovery.advertise never throws, so a failure here
+    // leaves the player serving exactly as before, just not auto-discoverable.
+    const me = identity.identity();
+    const ad = discovery.advertise({ name: me.name, port: PORT, id: me.id, version: require('./package.json').version });
+
+    // Withdraw the advertisement on a clean stop (Ctrl-C, or systemd's SIGTERM on the frame) so
+    // clients don't briefly see a dead Host. The supervisor short-circuits on `stopping`, so the
+    // exit code here is irrelevant; a self-update restart (process.exit(RESTART_CODE)) simply
+    // re-advertises on relaunch. This does not change the frame's stop/restart behavior.
+    for (const sig of ['SIGINT', 'SIGTERM']) {
+      process.once(sig, () => { try { ad.stop(); } catch { /* ignore */ } process.exit(0); });
+    }
   });
 });
