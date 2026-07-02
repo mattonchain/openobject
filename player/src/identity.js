@@ -41,7 +41,10 @@ function macComputerName() {
 // The default friendly name when the owner hasn't set one. Frame → "OpenObject"; anything else
 // (a Mac, or any non-frame host) → "OpenObject on <machine>".
 function defaultHostName() {
-  if (process.platform === 'linux') return 'OpenObject'; // the frame is the one Linux Host we ship
+  // The frame (the Linux Host we ship) defaults to "OpenObject Frame" — descriptive and distinct
+  // from the app name, so a client picker reads clearly ("OpenObject Frame" vs "OpenObject on <Mac>").
+  // Owners with more than one frame can override this per-Host (host_name); this is only the default.
+  if (process.platform === 'linux') return 'OpenObject Frame';
   const machine = (process.platform === 'darwin' && macComputerName()) || cleanHostname();
   return machine ? `OpenObject on ${machine}` : 'OpenObject';
 }

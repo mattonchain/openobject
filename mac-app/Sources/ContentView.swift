@@ -62,8 +62,10 @@ struct ContentView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Button("Open Control Panel") { actions.openControlPanel() }
-                .buttonStyle(.borderedProminent)
+            Button { actions.openControlPanel() } label: {
+                Text("Open Control Panel").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
             displayControls
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle.fill")
@@ -78,10 +80,16 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
             Text(name).font(.callout).multilineTextAlignment(.center)
         }
-        Button("Open Control Panel") { actions.openControlPanel() }
-            .buttonStyle(.borderedProminent)
+        Button { actions.openControlPanel() } label: {
+            Text("Open Control Panel").frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
         displayControls
-        Button("Run OpenObject on this Mac") { roleStore.runAsHost() }
+        // Switching to hosting your own is a rare "change my mind" action once you've chosen to access
+        // a Host, so it's a quiet link, not a button competing with Open Display / Open Control Panel.
+        Button("Host OpenObject on this Mac instead") { roleStore.runAsHost() }
+            .buttonStyle(.link)
+            .font(.footnote)
     }
 
     // The Display control in the WINDOW: just start or stop (uncluttered, 2 buttons total with Open
@@ -98,9 +106,15 @@ struct ContentView: View {
             Label("Showing on this Mac", systemImage: "play.display")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            Button("Stop Display") { actions.stopDisplay() }
+            Button { actions.stopDisplay() } label: {
+                Text("Stop Display").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
         } else {
-            Button("Open Display") { actions.openDisplay() }
+            Button { actions.openDisplay() } label: {
+                Text("Open Display").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
             if case .failed(let message) = display.state {
                 Text(message)
                     .font(.footnote)
@@ -126,28 +140,30 @@ struct ContentView: View {
 
     @ViewBuilder private var onboardingCard: some View {
         VStack(spacing: 12) {
-            Text("OpenObject is already on your network")
+            Text("OpenObject found on your network")
                 .font(.headline)
                 .multilineTextAlignment(.center)
-            Text("Use this Mac to view and control it, or run a separate OpenObject here.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            // No subtext: the two buttons below are self-explanatory, so a sentence restating them
+            // would just be redundant (Matt, 2026-07-02).
             VStack(spacing: 8) {
+                // One "Access …" per found Host (the sensible default when a Host exists), then the
+                // option to host a separate one here. "Access" (not "View") goes to the main window in
+                // Viewer mode, where you then choose Open Display or Open Control Panel — it does not
+                // jump straight to full-screen. All buttons full-width for a tidy stack.
                 ForEach(otherHosts) { host in
                     Button {
                         roleStore.view(hostId: host.id, name: host.name)
                     } label: {
-                        Text("View \(host.name)").lineLimit(1).frame(maxWidth: .infinity)
+                        Text("Access \(host.name)").lineLimit(1).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                 }
                 Button {
                     roleStore.runAsHost()
                 } label: {
-                    Text("Run OpenObject on this Mac").frame(maxWidth: .infinity)
+                    Text("Host OpenObject on this Mac").frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
             }
         }
         .padding(16)
