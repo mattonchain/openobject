@@ -3,24 +3,28 @@ import SwiftUI
 // OpenObject Mac app — entry point (MAC-APP-PLAN §B1; HANDOFF §20, 2026-07-01).
 //
 // The native Swift shell around the shared engine (player/). Per the plan the app has BOTH a Dock
-// presence (so it's a normal, discoverable app) AND a menu-bar item (for quick start/stop and
-// opening the control panel / display). This B1a skeleton stands up exactly that dual presence and
-// nothing more: no bundled Node, no server, no discovery yet. Those arrive in later checkpoints
-// (B1b bundle the engine, B2 spawn the Host, B3 discovery, B4 drive Chrome, B5 the real menu UX).
+// presence (a normal, discoverable app) AND a menu-bar item (quick start/stop, open control panel /
+// display). An NSApplicationDelegate (below) owns the bundled engine's process lifecycle — started
+// on launch, stopped cleanly on quit — and its EngineHost is shared into both scenes so the window
+// and the menu bar reflect the same Host state.
 
 @main
 struct OpenObjectApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         // A normal window → gives the app its Dock icon. Clicking the Dock icon shows this window.
         WindowGroup("OpenObject") {
             ContentView()
+                .environmentObject(appDelegate.engine)
         }
         .windowResizability(.contentSize)
 
-        // The menu-bar item. Its menu is a placeholder for now; the real start/stop, open control
-        // panel, open display, and Host/Display status actions land in B5.
+        // The menu-bar item. Fuller start/stop, open control panel/display, and role/status UX
+        // arrive in B5; for now it mirrors the Host status and offers Open Control Panel + Quit.
         MenuBarExtra("OpenObject", systemImage: "photo") {
             MenuBarContent()
+                .environmentObject(appDelegate.engine)
         }
     }
 }

@@ -1,17 +1,32 @@
 import SwiftUI
 import AppKit
 
-// The menu-bar item's menu (B1a placeholder). The real actions — start/stop the Host, open the
-// control panel, open the display, show whether this Mac is a Host or a Display and which server —
-// arrive in B5. For now it just names the app and offers Quit, so the dual Dock + menu-bar
-// presence is real and testable.
+// The menu-bar item's menu. It mirrors the Host status and offers Open Control Panel + Quit
+// (MAC-APP-PLAN §B2). The fuller UX — start/stop the Host, open the display, show Host vs Display
+// role and which server — arrives in B5.
 struct MenuBarContent: View {
+    @EnvironmentObject private var engine: EngineHost
+
     var body: some View {
-        Text("OpenObject")
+        statusLine
         Divider()
+        if case .running = engine.status {
+            Button("Open Control Panel") {
+                NSWorkspace.shared.open(engine.controlURL)
+            }
+        }
         Button("Quit OpenObject") {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+
+    private var statusLine: Text {
+        switch engine.status {
+        case .idle:            return Text("OpenObject — idle")
+        case .starting:        return Text("OpenObject — starting…")
+        case .running(let n):  return Text(n)
+        case .failed:          return Text("OpenObject — engine error")
+        }
     }
 }
