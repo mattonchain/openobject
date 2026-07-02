@@ -8,6 +8,19 @@
 // the timer advances). Order: Sequence / Shuffle (HANDOFF §7). New uploads,
 // deletions, Fit/Fill flips, and duration/order changes fold in live without restarting
 // the loop (polled). Always muted (§12).
+//
+// DISPLAY-TARGET CONTRACT (the Display role — HANDOFF §20, 2026-07-01; MAC-APP-PLAN §A4).
+// This page renders exactly one Host, and that Host is WHICHEVER ONE SERVED THIS PAGE. Every data
+// read (/api/display, /api/system) and every asset (/display.css, /arcade.js, /assets/…, the
+// same-origin connected-bundle mirror) is a ROOT-RELATIVE, same-origin URL, so "which Host this
+// Display shows" is decided entirely by the URL the page is opened at — nothing here assumes
+// localhost. The frame's kiosk opens http://localhost/display and every fetch resolves to the
+// frame itself (unchanged, exactly as before). The Mac app just opens Chrome at the CHOSEN Host's
+// /display (its own localhost when hosting, or a discovered Host's LAN address) and the same
+// relative fetches resolve to that Host. Deliberate NON-GOAL: no cross-origin "?host=" targeting
+// (a Display served by Host A rendering Host B) — that would force CORS + a per-Host CSP relaxation
+// and risk the frame's zero-config kiosk, for no gain when pointing Chrome at the right URL already
+// does it. Keep every URL in this file relative; do not hardcode an origin.
 
 const idle = document.getElementById('idle');
 const layers = [document.getElementById('layer0'), document.getElementById('layer1')];
