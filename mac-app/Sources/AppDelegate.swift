@@ -7,12 +7,15 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let engine = EngineHost()
+    let discovery = HostDiscovery()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         engine.start()
+        discovery.start() // browse the network for OpenObject Hosts (B3)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        discovery.stop()
         engine.stop()
     }
 }
