@@ -8,6 +8,8 @@ struct ContentView: View {
     @EnvironmentObject private var engine: EngineHost
     @EnvironmentObject private var discovery: HostDiscovery
     @EnvironmentObject private var roleStore: RoleStore
+    @EnvironmentObject private var display: DisplayController
+    @EnvironmentObject private var actions: DisplayActions
 
     var body: some View {
         VStack(spacing: 16) {
@@ -28,10 +30,10 @@ struct ContentView: View {
             }
         }
         .padding(40)
-        // Fixed default width (420), growable to read a long host name; height follows the content so
-        // the window grows to fit a few Hosts and the list scrolls only when there are many (see
-        // hostsView). Resizes aren't persisted — see WindowConfigurator.
-        .frame(minWidth: 420, maxWidth: .infinity)
+        // Fixed width (420) so a long host name wraps to another line rather than stretching the
+        // window sideways; height follows the content (the window grows to fit a few Hosts and the
+        // list scrolls when there are many — see hostsView). Resizes aren't persisted (WindowConfigurator).
+        .frame(width: 420)
         .background(WindowConfigurator())
     }
 
@@ -55,13 +57,14 @@ struct ContentView: View {
             VStack(spacing: 4) {
                 Label("Host running", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                Text(name).font(.callout)
+                Text(name).font(.callout).multilineTextAlignment(.center)
                 Text(engine.baseURL.absoluteString)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Button("Open Control Panel") { openControlPanel() }
+            Button("Open Control Panel") { actions.openControlPanel() }
                 .buttonStyle(.borderedProminent)
+            displayControls
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
@@ -73,11 +76,38 @@ struct ContentView: View {
         VStack(spacing: 4) {
             Label("Viewing", systemImage: "display")
                 .foregroundStyle(.secondary)
-            Text(name).font(.callout)
+            Text(name).font(.callout).multilineTextAlignment(.center)
         }
-        Button("Open Control Panel") { openControlPanel() }
+        Button("Open Control Panel") { actions.openControlPanel() }
             .buttonStyle(.borderedProminent)
+        displayControls
         Button("Run OpenObject on this Mac") { roleStore.runAsHost() }
+    }
+
+    // The Display control in the WINDOW: just start or stop (uncluttered, 2 buttons total with Open
+    // Control Panel). "Return to Display" and "Show OpenObject" live in the menu bar instead, because
+    // those are only needed when you're NOT looking at this window — and the menu bar is reachable
+    // from inside the full-screen kiosk (hover the top) while this window is not (§B4/§B5).
+    @ViewBuilder private var displayControls: some View {
+        if !display.isChromeInstalled {
+            Text("Install Google Chrome to show the display.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        } else if display.state == .running {
+            Label("Showing on this Mac", systemImage: "play.display")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Button("Stop Display") { actions.stopDisplay() }
+        } else {
+            Button("Open Display") { actions.openDisplay() }
+            if case .failed(let message) = display.state {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+            }
+        }
     }
 
     // MARK: - First-run onboarding (only when another Host is found)
@@ -210,20 +240,6 @@ struct ContentView: View {
         switch roleStore.mode {
         case .host: return host.id == engine.hostId
         case .viewer(let id, _): return host.id == id
-        }
-    }
-
-    private func openControlPanel() {
-        switch roleStore.mode {
-        case .host:
-            NSWorkspace.shared.open(engine.controlURL)
-        case .viewer(let id, _):
-            guard let host = discovery.hosts.first(where: { $0.id == id }) else { return }
-            Task {
-                if let url = await discovery.resolveURL(for: host) {
-                    NSWorkspace.shared.open(url)
-                }
-            }
         }
     }
 }

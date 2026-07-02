@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let engine = EngineHost()
     let discovery = HostDiscovery()
     let roleStore = RoleStore()
+    let display = DisplayController()
+    lazy var actions = DisplayActions(engine: engine, discovery: discovery, roleStore: roleStore, display: display)
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -29,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        display.stop()
         discovery.stop()
         engine.stop()
     }

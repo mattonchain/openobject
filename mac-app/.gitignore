@@ -11,6 +11,7 @@ xcuserdata/
 # player/. These are build inputs staged locally, never committed (the engine lives in player/).
 Resources/node
 Resources/player/
+Resources/assets/
 
 # Cached Node download (verified tarball + extracted binary) so builds don't re-fetch every time.
 .node-cache/

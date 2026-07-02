@@ -77,4 +77,14 @@ if [ ! -d "$DEST/player/node_modules" ]; then
   ( cd "$DEST/player" && npm ci --omit=dev )
 fi
 
-echo "[bundle-engine] done: node $("$DEST/node" --version) + player/ ($(du -sh "$DEST/player" | awk '{print $1}'))"
+# ── 3. Brand assets: served from REPO_ROOT/assets, a SIBLING of player/ ───────
+# The player serves /assets/branding/... (favicons, plus the idle- and sleep-screen OPEN/OBJECT
+# wordmark, masked from openobject-logo.svg) out of the repo root, NOT player/. In the bundle the
+# player's parent dir is Resources/, so these must sit at Resources/assets or /assets 404s and the
+# display shows no wordmark (HANDOFF §20, 2026-07-02).
+echo "[bundle-engine] copying assets/…"
+rm -rf "$DEST/assets"
+mkdir -p "$DEST/assets"
+rsync -a --exclude '.DS_Store' "$REPO_ROOT/assets/" "$DEST/assets/"
+
+echo "[bundle-engine] done: node $("$DEST/node" --version) + player/ ($(du -sh "$DEST/player" | awk '{print $1}')) + assets/"
