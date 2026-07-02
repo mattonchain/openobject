@@ -26,16 +26,22 @@ const idle = document.getElementById('idle');
 const layers = [document.getElementById('layer0'), document.getElementById('layer1')];
 const arcadeCanvas = document.getElementById('arcade'); // hidden self-playing demo (easter egg)
 
-// The idle hint shows the address to reach the control panel: the host this page was opened at
-// (localhost:3000 when the Mac is the display). The frame's kiosk opens localhost though, where the
-// owner reaches it at the advertised name instead, so on a loopback host fall back to the server's
-// mDNS name (openobject.local on the frame; none on a Mac/standalone, where the host already reads
-// right). See §6.
+// The idle hint shows an address the owner can use to reach the control panel and add art. The
+// kiosk opens the display at localhost, but localhost is reachable only ON this machine, so when the
+// page is on a loopback host we ask the server for a better address. Preference order: (1) the mDNS
+// name (openobject.local on the frame); (2) a LAN address (so it is reachable from a phone or another
+// computer, the useful case on a Mac, where there is no mDNS name); otherwise (3) leave whatever host
+// the page was opened at. See §6.
 const hintHost = document.querySelector('.hint .host');
 if (hintHost) {
   hintHost.textContent = location.host;
   if (location.hostname === 'localhost' || location.hostname.startsWith('127.')) {
-    fetch('/api/system').then((r) => r.json()).then((s) => { if (s && s.mdns) hintHost.textContent = s.mdns; }).catch(() => {});
+    fetch('/api/system').then((r) => r.json()).then((s) => {
+      if (!s) return;
+      if (s.mdns) { hintHost.textContent = s.mdns; return; }
+      const lan = s.addresses && s.addresses[0];
+      if (lan) hintHost.textContent = lan + (location.port ? ':' + location.port : '');
+    }).catch(() => {});
   }
 }
 
