@@ -18,6 +18,7 @@ struct OpenObjectApp: App {
             ContentView()
                 .environmentObject(appDelegate.engine)
                 .environmentObject(appDelegate.discovery)
+                .environmentObject(appDelegate.roleStore)
         }
         // Opens compact by default but stays user-resizable (contentMinSize lets the user drag it
         // larger, e.g. to reveal a long host name). The resize isn't persisted — see WindowConfigurator.

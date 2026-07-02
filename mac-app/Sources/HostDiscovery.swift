@@ -78,4 +78,49 @@ final class HostDiscovery: ObservableObject {
         if case let .string(value) = record.getEntry(for: key) { return value }
         return nil
     }
+
+    // Resolve a discovered Host's Bonjour endpoint to a reachable http URL (host:port). A browse
+    // result only names the service; resolving it to an address needs a connection attempt. Used by
+    // Viewer mode to open a remote Host's control panel (and, in B4, its /display). Returns nil if the
+    // Host can't be reached (e.g. it just went offline).
+    func resolveURL(for host: Host) async -> URL? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<URL?, Never>) in
+            let connection = NWConnection(to: host.endpoint, using: .tcp)
+            var finished = false
+            let finish: (URL?) -> Void = { url in
+                if finished { return }
+                finished = true
+                connection.cancel()
+                continuation.resume(returning: url)
+            }
+            connection.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    if case let .hostPort(host: nwHost, port: nwPort) = connection.currentPath?.remoteEndpoint {
+                        finish(Self.httpURL(host: nwHost, port: nwPort))
+                    } else {
+                        finish(nil)
+                    }
+                case .failed, .cancelled:
+                    finish(nil)
+                default:
+                    break
+                }
+            }
+            connection.start(queue: .global())
+        }
+    }
+
+    nonisolated private static func httpURL(host: NWEndpoint.Host, port: NWEndpoint.Port) -> URL? {
+        let address: String
+        switch host {
+        case .ipv4(let ip): address = "\(ip)"
+        case .ipv6(let ip): address = "[\(ip)]"          // IPv6 literals are bracketed in URLs
+        case .name(let name, _): address = name
+        @unknown default: return nil
+        }
+        // Trim any IPv6 zone id (e.g. "fe80::1%en0") which isn't valid in a URL host.
+        let clean = address.split(separator: "%").first.map(String.init) ?? address
+        return URL(string: "http://\(clean):\(port.rawValue)")
+    }
 }

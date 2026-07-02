@@ -17,6 +17,9 @@ final class EngineHost: ObservableObject {
     }
 
     @Published private(set) var status: Status = .idle
+    // This Host's stable id (from /healthz), so the UI can mark the local Host as "This Mac" in the
+    // discovered-Hosts list. Nil until the Host answers.
+    @Published private(set) var hostId: String?
 
     // Fixed for now; the app owns the port and hands it to the Display (Chrome) in B4.
     let port = 3000
@@ -98,6 +101,7 @@ final class EngineHost: ObservableObject {
         tearingDown = true
         process = nil
         status = .idle
+        hostId = nil
         proc.terminationHandler = nil
         proc.terminate() // SIGTERM — the server withdraws its Bonjour record and exits (A2/A3)
 
@@ -115,8 +119,11 @@ final class EngineHost: ObservableObject {
         let health = baseURL.appendingPathComponent("healthz")
         for _ in 0..<80 { // ~20s at 250ms
             if process == nil { return } // stopped while we were waiting
-            if let name = await fetchHostName(health) {
-                if process != nil { status = .running(name: name) }
+            if let identity = await fetchIdentity(health) {
+                if process != nil {
+                    hostId = identity.id
+                    status = .running(name: identity.name)
+                }
                 return
             }
             try? await Task.sleep(nanoseconds: 250_000_000)
@@ -126,13 +133,13 @@ final class EngineHost: ObservableObject {
         }
     }
 
-    private func fetchHostName(_ url: URL) async -> String? {
+    private func fetchIdentity(_ url: URL) async -> (id: String, name: String)? {
         var req = URLRequest(url: url)
         req.timeoutInterval = 1.5
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               let http = resp as? HTTPURLResponse, http.statusCode == 200,
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
-        return (obj["name"] as? String) ?? "OpenObject"
+        return (id: (obj["id"] as? String) ?? "", name: (obj["name"] as? String) ?? "OpenObject")
     }
 }

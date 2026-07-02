@@ -1,12 +1,13 @@
 import SwiftUI
 import AppKit
 
-// The main window's content: reflects the bundled Host's status and, once it's running, offers a
-// way into the control panel (MAC-APP-PLAN §B2). Onboarding (Host vs Display role) and driving the
-// display in Chrome come in B3/B4.
+// The main window. It is role-aware (MAC-APP-PLAN §B3): the top reflects whether this Mac is running
+// its own Host or viewing a chosen remote Host, and the discovered-Hosts list below is selectable to
+// switch between them. First-run onboarding presentation + list-growth polish come in B3b-2.
 struct ContentView: View {
     @EnvironmentObject private var engine: EngineHost
     @EnvironmentObject private var discovery: HostDiscovery
+    @EnvironmentObject private var roleStore: RoleStore
 
     var body: some View {
         VStack(spacing: 16) {
@@ -16,29 +17,65 @@ struct ContentView: View {
             Text("OpenObject")
                 .font(.title.weight(.semibold))
 
-            statusView
-
-            if case .running = engine.status {
-                Button("Open Control Panel") {
-                    NSWorkspace.shared.open(engine.controlURL)
-                }
-                .buttonStyle(.borderedProminent)
-            }
+            roleSection
 
             Divider()
             hostsView
         }
         .padding(40)
-        // Compact by default, but user-resizable so a long host name (middle-truncated below) can be
-        // widened to read in full. Resizes are NOT persisted — WindowConfigurator disables frame
-        // restoration, so the window reopens at its default size (Matt, 2026-07-02). Top-aligned so
-        // extra height falls below the content instead of stretching it.
+        // Compact by default, user-resizable (long host names widen to read in full), and the resize
+        // is not persisted — see WindowConfigurator. Top-aligned so extra height falls below content.
         .frame(minWidth: 380, maxWidth: .infinity, minHeight: 320, maxHeight: .infinity, alignment: .top)
         .background(WindowConfigurator())
     }
 
-    // Hosts found on the network (B3). Proves discovery works; B3b turns this into the first-run
-    // "view an existing Host vs run my own" choice.
+    // MARK: - Top: the current role
+
+    @ViewBuilder private var roleSection: some View {
+        switch roleStore.mode {
+        case .host:
+            hostStatusView
+        case .viewer(_, let name):
+            viewerStatusView(name: name)
+        }
+    }
+
+    @ViewBuilder private var hostStatusView: some View {
+        switch engine.status {
+        case .idle, .starting:
+            Label("Starting the host…", systemImage: "hourglass")
+                .foregroundStyle(.secondary)
+        case .running(let name):
+            VStack(spacing: 4) {
+                Label("Host running", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text(name).font(.callout)
+                Text(engine.baseURL.absoluteString)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Button("Open Control Panel") { openControlPanel() }
+                .buttonStyle(.borderedProminent)
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    @ViewBuilder private func viewerStatusView(name: String) -> some View {
+        VStack(spacing: 4) {
+            Label("Viewing", systemImage: "display")
+                .foregroundStyle(.secondary)
+            Text(name).font(.callout)
+        }
+        Button("Open Control Panel") { openControlPanel() }
+            .buttonStyle(.borderedProminent)
+        Button("Run OpenObject on this Mac") { roleStore.runAsHost() }
+    }
+
+    // MARK: - Bottom: discovered Hosts (selectable to switch roles)
+
     @ViewBuilder private var hostsView: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("OpenObject hosts on your network")
@@ -48,47 +85,78 @@ struct ContentView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(discovery.hosts) { host in
-                    HStack(spacing: 6) {
-                        Image(systemName: "dot.radiowaves.left.and.right")
-                            .foregroundStyle(.secondary)
-                        Text(host.name)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        if let version = host.version {
-                            Text("v\(version)")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                ForEach(orderedHosts) { host in
+                    hostRow(host)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    @ViewBuilder private var statusView: some View {
-        switch engine.status {
-        case .idle:
-            Label("Idle", systemImage: "circle")
-                .foregroundStyle(.secondary)
-        case .starting:
-            Label("Starting the host…", systemImage: "hourglass")
-                .foregroundStyle(.secondary)
-        case .running(let name):
-            VStack(spacing: 4) {
-                Label("Host running", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text(name)
-                    .font(.callout)
-                Text(engine.baseURL.absoluteString)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+    @ViewBuilder private func hostRow(_ host: HostDiscovery.Host) -> some View {
+        let active = isActive(host)
+        let local = (host.id == engine.hostId)
+        if active {
+            // The Host currently wired up: a prominent, checkmarked label — NOT a disabled button
+            // (a disabled control renders grayed, which wrongly dimmed the active row).
+            rowLabel(host, active: true, local: local)
+        } else {
+            // Another Host: a clickable button that switches to it.
+            Button {
+                if local { roleStore.runAsHost() } else { roleStore.view(hostId: host.id, name: host.name) }
+            } label: {
+                rowLabel(host, active: false, local: local)
             }
-        case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-                .multilineTextAlignment(.center)
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder private func rowLabel(_ host: HostDiscovery.Host, active: Bool, local: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: active ? "checkmark.circle.fill" : "dot.radiowaves.left.and.right")
+                .foregroundStyle(active ? Color.green : Color.secondary)
+            Text(host.name)
+                .fontWeight(active ? .semibold : .regular)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if let version = host.version {
+                Text("v\(version)").font(.footnote).foregroundStyle(.secondary)
+            }
+            if local {
+                Text("· This Mac").font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Actions
+
+    // The connected/wired Host first, then the rest in discovery's alphabetical order (Matt,
+    // 2026-07-02). discovery.hosts is already sorted by name.
+    private var orderedHosts: [HostDiscovery.Host] {
+        let hosts = discovery.hosts
+        return hosts.filter { isActive($0) } + hosts.filter { !isActive($0) }
+    }
+
+    private func isActive(_ host: HostDiscovery.Host) -> Bool {
+        switch roleStore.mode {
+        case .host: return host.id == engine.hostId
+        case .viewer(let id, _): return host.id == id
+        }
+    }
+
+    private func openControlPanel() {
+        switch roleStore.mode {
+        case .host:
+            NSWorkspace.shared.open(engine.controlURL)
+        case .viewer(let id, _):
+            guard let host = discovery.hosts.first(where: { $0.id == id }) else { return }
+            Task {
+                if let url = await discovery.resolveURL(for: host) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
     }
 }
